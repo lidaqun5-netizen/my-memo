@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { background-color: #262626; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .box { width: 350px; background: #404040; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
+        textarea { width: 100%; height: 80px; background: #333; color: white; border: none; padding: 10px; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; background: #38BDF8; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; color: black; }
+    </style>
+</head>
+<body>
+
+    <div class="box">
+        <h2>📝 個人備忘錄</h2>
+        <textarea id="memoInput" placeholder="隨手記點什麼..."></textarea>
+        <button onclick="saveMemo()">儲存備忘錄</button>
+        <p id="memoDisplay"></p>
+    </div>
+
+    <script>
+        window.onload = function() {
+            document.getElementById("memoDisplay").innerText = localStorage.getItem("myMemo") || "尚無紀錄";
+        };
+
+        function saveMemo() {
+            let memo = document.getElementById("memoInput").value;
+            localStorage.setItem("myMemo", memo);
+            document.getElementById("memoDisplay").innerText = memo;
+            alert("備忘錄已儲存！");
+        }
+    </script>
+</body>
+</html>
