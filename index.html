@@ -6,24 +6,33 @@
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 20px; max-width: 500px; margin: auto; background: #fafafa; }
         .post { background: #fff; border: 1px solid #dbdbdb; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
-        .time { color: #8e8e8e; font-size: 12px; }
+        .time { color: #8e8e8e; font-size: 11px; margin-bottom: 8px; }
         .actions { margin-top: 10px; display: flex; gap: 15px; align-items: center; }
-        .like-btn { cursor: pointer; color: #ed4956; font-weight: bold; }
-        textarea { width: 100%; height: 80px; margin-bottom: 10px; padding: 10px; border: 1px solid #dbdbdb; border-radius: 8px; }
-        button { width: 100%; padding: 10px; background: #0095f6; color: white; border: none; border-radius: 8px; cursor: pointer; }
+        .like-btn { cursor: pointer; color: #ed4956; font-weight: bold; background: none; border: 1px solid #ed4956; padding: 5px 10px; border-radius: 5px; }
+        .delete-btn { cursor: pointer; color: #8e8e8e; font-size: 12px; }
+        textarea { width: 100%; height: 80px; margin-bottom: 10px; padding: 10px; border: 1px solid #dbdbdb; border-radius: 8px; box-sizing: border-box; }
+        button#postBtn { width: 100%; padding: 10px; background: #0095f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
     <h1>🔥 大家都在看</h1>
-    <textarea id="postInput" placeholder="分享你的心情..."></textarea>
-    <button id="postBtn">發佈</button>
-    <div id="memoList"></div>
+    <textarea id="postInput" placeholder="現在有什麼熱門話題？跟大家分享吧！"></textarea>
+    <button id="postBtn">發佈貼文</button>
+    <div id="memoList" style="margin-top: 20px;"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, updateDoc, increment, doc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, updateDoc, increment, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
-        const firebaseConfig = { /* (保持你原有的 firebaseConfig 不變) */ };
+        const firebaseConfig = {
+            apiKey: "AIzaSyDnF-e8BYtHKkqMGKLPL6-tCzh9SZHwGIE",
+            authDomain: "my-social-app-74cb5.firebaseapp.com",
+            projectId: "my-social-app-74cb5",
+            storageBucket: "my-social-app-74cb5.firebasestorage.app",
+            messagingSenderId: "296934453383",
+            appId: "1:296934453383:web:c5135ba3c923e20c788822",
+            measurementId: "G-0VCRMP00CS"
+        };
         
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
@@ -31,12 +40,12 @@
         // 發文功能
         document.getElementById("postBtn").addEventListener("click", async () => {
             const text = document.getElementById("postInput").value;
-            if (!text) return;
+            if (!text.trim()) return alert("請輸入內容喔！");
             await addDoc(collection(db, "memos"), { content: text, timestamp: new Date(), likes: 0 });
             document.getElementById("postInput").value = "";
         });
 
-        // 即時監聽貼文 (onSnapshot)
+        // 即時監聽貼文
         const q = query(collection(db, "memos"), orderBy("timestamp", "desc"));
         onSnapshot(q, (snapshot) => {
             const list = document.getElementById("memoList");
@@ -47,18 +56,25 @@
                 const div = document.createElement("div");
                 div.className = "post";
                 div.innerHTML = `
-                    <p>${data.content}</p>
                     <div class="time">${time}</div>
+                    <p>${data.content}</p>
                     <div class="actions">
-                        <span class="like-btn" onclick="likePost('${docSnap.id}')">❤️ ${data.likes || 0}</span>
+                        <button class="like-btn" onclick="likePost('${docSnap.id}')">❤️ ${data.likes || 0}</button>
+                        <span class="delete-btn" onclick="deletePost('${docSnap.id}')">刪除</span>
                     </div>
                 `;
                 list.appendChild(div);
             });
         });
 
+        // 綁定全域函式給按鈕使用
         window.likePost = async (id) => {
             await updateDoc(doc(db, "memos", id), { likes: increment(1) });
+        };
+        window.deletePost = async (id) => {
+            if(confirm("確定要刪除這則動態嗎？")) {
+                await deleteDoc(doc(db, "memos", id));
+            }
         };
     </script>
 </body>
