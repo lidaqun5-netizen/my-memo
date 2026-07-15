@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>我的備忘錄</title>
+</head>
+<body>
+
+    <div class="container">
+        <h1>📝 個人備忘錄</h1>
+        <textarea id="memoInput" placeholder="隨手記點什麼..."></textarea>
+        <button id="saveBtn">儲存備忘錄</button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.x.x/firebase-app.js";
+        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/9.x.x/firebase-firestore.js";
+
+        // 這是你剛剛取得的正確設定
+        const firebaseConfig = {
+            apiKey: "AIzaSyDnF-e8BYtHKkqMGKLPL6-tCzh9SZHwGIE",
+            authDomain: "my-social-app-74cb5.firebaseapp.com",
+            projectId: "my-social-app-74cb5",
+            storageBucket: "my-social-app-74cb5.firebasestorage.app",
+            messagingSenderId: "296934453383",
+            appId: "1:296934453383:web:c5135ba3c923e20c788822",
+            measurementId: "G-0VCRMP00CS"
+        };
+
+        // 初始化 Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // 按鈕功能：點擊後將內容存入 Firestore
+        document.getElementById("saveBtn").addEventListener("click", async () => {
+            const text = document.getElementById("memoInput").value;
+            if (!text.trim()) return alert("請輸入內容！");
+            
+            try {
+                await addDoc(collection(db, "memos"), {
+                    content: text,
+                    timestamp: new Date()
+                });
+                alert("發佈成功！");
+                document.getElementById("memoInput").value = ""; // 清空輸入框
+            } catch (e) {
+                console.error("錯誤:", e);
+                alert("發佈失敗，請檢查權限設定");
+            }
+        });
+    </script>
+</body>
+</html>
