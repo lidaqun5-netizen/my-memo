@@ -2,26 +2,28 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>我的社群牆</title>
+    <title>我的社群動態牆</title>
     <style>
-        .post { border: 1px solid #ccc; padding: 10px; margin: 10px; border-radius: 8px; position: relative; }
-        .delete-btn { color: red; cursor: pointer; font-size: 12px; margin-left: 10px; }
+        body { font-family: sans-serif; padding: 20px; line-height: 1.6; }
+        .post { border: 1px solid #ddd; padding: 15px; margin: 15px 0; border-radius: 8px; background: #f9f9f9; }
+        .delete-btn { color: #ff4d4f; cursor: pointer; font-size: 12px; margin-left: 10px; text-decoration: underline; }
+        textarea { width: 100%; height: 80px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
-
     <h1>📝 我的社群動態牆</h1>
     <div>
         <textarea id="postInput" placeholder="寫點什麼吧..."></textarea>
         <button id="postBtn">發佈貼文</button>
     </div>
-    <hr>
-    <div id="memoList"></div>
+    <div id="memoList">讀取中...</div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.x.x/firebase-app.js";
-        import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/9.x.x/firebase-firestore.js";
+        // 1. 導入 Firebase 模組 (使用穩定版本 9.22.0)
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, query, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
+        // 2. Firebase 設定 (請確認這裡的內容與你控制台一致)
         const firebaseConfig = {
             apiKey: "AIzaSyDnF-e8BYtHKkqMGKLPL6-tCzh9SZHwGIE",
             authDomain: "my-social-app-74cb5.firebaseapp.com",
@@ -32,49 +34,61 @@
             measurementId: "G-0VCRMP00CS"
         };
 
+        // 3. 初始化 Firebase 與 Firestore
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // 發佈貼文功能
+        // 4. 發佈貼文功能
         document.getElementById("postBtn").addEventListener("click", async () => {
             const text = document.getElementById("postInput").value;
             if (!text.trim()) return alert("請輸入內容！");
+            
             try {
-                await addDoc(collection(db, "memos"), { content: text, timestamp: new Date() });
+                await addDoc(collection(db, "memos"), { 
+                    content: text, 
+                    timestamp: new Date() 
+                });
                 document.getElementById("postInput").value = "";
-                loadMemos(); // 重新讀取列表
+                alert("發佈成功！");
+                loadMemos(); // 發佈後重新載入列表
             } catch (e) {
-                alert("發佈失敗，請檢查權限");
+                console.error("發佈失敗:", e);
+                alert("發佈失敗，請查看 Console！");
             }
         });
 
-        // 讀取並渲染貼文
+        // 5. 讀取貼文功能
         async function loadMemos() {
             const memoList = document.getElementById("memoList");
-            const q = query(collection(db, "memos"), orderBy("timestamp", "desc"));
-            const querySnapshot = await getDocs(q);
-
-            memoList.innerHTML = "";
-            querySnapshot.forEach((docSnap) => {
-                const data = docSnap.data();
-                const div = document.createElement("div");
-                div.className = "post";
-                div.innerHTML = `<p>${data.content}</p>
-                                 <small>${data.timestamp?.toDate().toLocaleString() || '剛剛'}</small>
-                                 <span class="delete-btn" data-id="${docSnap.id}">刪除</span>`;
-                memoList.appendChild(div);
-            });
-
-            // 綁定刪除事件
-            document.querySelectorAll(".delete-btn").forEach(btn => {
-                btn.addEventListener("click", async (e) => {
-                    const id = e.target.getAttribute("data-id");
-                    await deleteDoc(doc(db, "memos", id));
-                    loadMemos(); 
+            try {
+                const q = query(collection(db, "memos"), orderBy("timestamp", "desc"));
+                const querySnapshot = await getDocs(q);
+                
+                memoList.innerHTML = "";
+                querySnapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    const div = document.createElement("div");
+                    div.className = "post";
+                    div.innerHTML = `<p>${data.content}</p>
+                                    <span class="delete-btn" data-id="${docSnap.id}">刪除</span>`;
+                    memoList.appendChild(div);
                 });
-            });
+
+                // 綁定刪除事件
+                document.querySelectorAll(".delete-btn").forEach(btn => {
+                    btn.addEventListener("click", async (e) => {
+                        const id = e.target.getAttribute("data-id");
+                        await deleteDoc(doc(db, "memos", id));
+                        loadMemos();
+                    });
+                });
+            } catch (e) {
+                memoList.innerHTML = "讀取失敗，請確認 Firebase 設定。";
+                console.error(e);
+            }
         }
 
+        // 頁面載入時執行一次
         loadMemos();
     </script>
 </body>
