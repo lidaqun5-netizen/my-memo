@@ -28,6 +28,7 @@
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, updateDoc, increment, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
+        // 這裡確保 authDomain 設定正確
         const firebaseConfig = {
             apiKey: "AIzaSyDnF-e8BYtHKkqMGKLPL6-tCzh9SZHwGIE",
             authDomain: "my-social-app-74cb5.firebaseapp.com",
@@ -42,7 +43,7 @@
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
-        // 監聽登入狀態
+        // 監聽登入狀態，確保介面切換
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 document.getElementById("loginSection").style.display = "none";
@@ -55,13 +56,19 @@
             }
         });
 
-        document.getElementById("loginBtn").onclick = () => signInWithPopup(auth, provider);
+        // 登入事件
+        document.getElementById("loginBtn").onclick = () => {
+            signInWithPopup(auth, provider).catch((error) => {
+                console.error("登入錯誤:", error);
+                alert("登入失敗，請確認 Firebase 已啟用 Google 驗證。");
+            });
+        };
 
         // 發文功能
         document.getElementById("postBtn").addEventListener("click", async () => {
             const text = document.getElementById("postInput").value;
             const user = auth.currentUser;
-            if (!text.trim()) return;
+            if (!text.trim() || !user) return;
             await addDoc(collection(db, "memos"), { 
                 content: text, 
                 name: user.displayName, 
