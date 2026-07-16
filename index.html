@@ -25,7 +25,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, updateDoc, increment, doc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, updateDoc, increment, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDnF-e8BYtHKkqMGKLPL6-tCzh9SZHwGIE",
@@ -38,7 +38,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // 發文功能
+        // 發文邏輯
         document.getElementById("postBtn").addEventListener("click", async () => {
             const text = document.getElementById("postInput").value;
             const name = prompt("請設定你的暱稱：") || "匿名用戶";
@@ -47,25 +47,15 @@
             document.getElementById("postInput").value = "";
         });
 
-        // 嚴謹的按讚切換邏輯
-        window.likePost = async (id) => {
-            const docRef = doc(db, "memos", id);
-            const isLiked = localStorage.getItem('liked_' + id);
-            const docSnap = await getDoc(docRef);
-            const currentLikes = docSnap.data().likes || 0;
-
-            if (!isLiked) {
-                await updateDoc(docRef, { likes: increment(1) });
-                localStorage.setItem('liked_' + id, 'true');
-            } else if (currentLikes > 0) {
-                await updateDoc(docRef, { likes: increment(-1) });
-                localStorage.removeItem('liked_' + id);
-            }
+        // 點擊即觸發增減，且防負數邏輯
+        window.likePost = async (id, currentLikes) => {
+            const delta = currentLikes > 0 ? -1 : 1;
+            await updateDoc(doc(db, "memos", id), { likes: increment(delta) });
         };
 
         window.deletePost = async (id) => { if(confirm("確定刪除？")) await deleteDoc(doc(db, "memos", id)); };
 
-        // 即時監聽渲染 (加入狀態同步檢查)
+        // 即時監聽與渲染
         const q = query(collection(db, "memos"), orderBy("timestamp", "desc"));
         onSnapshot(q, (snapshot) => {
             const list = document.getElementById("memoList");
@@ -73,20 +63,19 @@
             snapshot.forEach(docSnap => {
                 const data = docSnap.data();
                 const id = docSnap.id;
-                // 強制同步：只有在 localStorage 有紀錄且資料庫數值大於 0 時才顯示紅心
-                const isLiked = localStorage.getItem('liked_' + id) && (data.likes > 0);
+                const likes = data.likes || 0;
                 
                 const div = document.createElement("div");
                 div.className = "post";
                 div.innerHTML = `
                     <div class="user-info">
-                        <div class="avatar">${data.name.charAt(0)}</div>
-                        <strong>${data.name}</strong>
+                        <div class="avatar">${data.name?.charAt(0) || '匿'}</div>
+                        <strong>${data.name || '匿名用戶'}</strong>
                     </div>
                     <p style="margin: 10px 0;">${data.content}</p>
                     <div class="actions">
-                        <button class="like-btn" onclick="likePost('${id}')">
-                            ${isLiked ? '❤️' : '🤍'} ${data.likes || 0}
+                        <button class="like-btn" onclick="likePost('${id}', ${likes})">
+                            ${likes > 0 ? '❤️' : '🤍'} ${likes}
                         </button>
                         <span class="delete-btn" onclick="deletePost('${id}')">刪除</span>
                     </div>
