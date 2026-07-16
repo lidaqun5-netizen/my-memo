@@ -30,6 +30,7 @@
 
         const firebaseConfig = {
             apiKey: "AIzaSyDnF-e8BYtHKkqMGKLPL6-tCzh9SZHwGIE",
+            authDomain: "my-social-app-74cb5.firebaseapp.com",
             projectId: "my-social-app-74cb5",
             storageBucket: "my-social-app-74cb5.firebasestorage.app",
             messagingSenderId: "296934453383",
@@ -48,6 +49,9 @@
                 document.getElementById("appSection").style.display = "block";
                 document.getElementById("userName").innerText = `你好, ${user.displayName}`;
                 loadPosts();
+            } else {
+                document.getElementById("loginSection").style.display = "block";
+                document.getElementById("appSection").style.display = "none";
             }
         });
 
@@ -58,7 +62,13 @@
             const text = document.getElementById("postInput").value;
             const user = auth.currentUser;
             if (!text.trim()) return;
-            await addDoc(collection(db, "memos"), { content: text, name: user.displayName, uid: user.uid, timestamp: new Date(), likes: 0 });
+            await addDoc(collection(db, "memos"), { 
+                content: text, 
+                name: user.displayName, 
+                uid: user.uid, 
+                timestamp: new Date(), 
+                likes: 0 
+            });
             document.getElementById("postInput").value = "";
         });
 
@@ -74,10 +84,10 @@
                     div.innerHTML = `
                         <strong>${data.name}</strong>
                         <p>${data.content}</p>
-                        <button onclick="updateDoc(doc(db, 'memos', '${docSnap.id}'), {likes: increment(${data.likes > 1 ? -1 : 1})})">
-                            ${data.likes > 1 ? '❤️' : '🤍'} ${data.likes}
+                        <button onclick="updateDoc(doc(db, 'memos', '${docSnap.id}'), {likes: increment(1)})">
+                            ❤️ ${data.likes}
                         </button>
-                        ${auth.currentUser.uid === data.uid ? `<button onclick="deleteDoc(doc(db, 'memos', '${docSnap.id}'))">刪除</button>` : ''}
+                        ${auth.currentUser && auth.currentUser.uid === data.uid ? `<button onclick="deleteDoc(doc(db, 'memos', '${docSnap.id}'))">刪除</button>` : ''}
                     `;
                     list.appendChild(div);
                 });
