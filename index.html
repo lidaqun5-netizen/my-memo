@@ -9,14 +9,12 @@
         .post { background: #fff; border-radius: 12px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         .user-info { display: flex; align-items: center; margin-bottom: 10px; }
         .avatar { width: 35px; height: 35px; background: #0095f6; border-radius: 50%; margin-right: 10px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
-        .time { color: #8e8e8e; font-size: 11px; margin-bottom: 8px; }
         .actions { margin-top: 12px; display: flex; gap: 15px; align-items: center; border-top: 1px solid #eee; padding-top: 10px; }
         .like-btn { cursor: pointer; background: none; border: none; font-size: 16px; transition: transform 0.1s; }
         .like-btn:active { transform: scale(1.3); }
         .delete-btn { cursor: pointer; color: #8e8e8e; font-size: 12px; }
         textarea { width: 100%; height: 80px; margin-bottom: 10px; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
         button#postBtn { width: 100%; padding: 12px; background: #0095f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        button#postBtn:disabled { background: #a0d1ff; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -45,31 +43,21 @@
             const text = document.getElementById("postInput").value;
             const name = prompt("請設定你的暱稱：") || "匿名用戶";
             if (!text.trim()) return alert("請輸入內容！");
-            
-            const btn = document.getElementById("postBtn");
-            btn.innerText = "發佈中...";
-            btn.disabled = true;
-
             await addDoc(collection(db, "memos"), { content: text, name: name, timestamp: new Date(), likes: 0 });
-            
-            btn.innerText = "發佈貼文";
-            btn.disabled = false;
             document.getElementById("postInput").value = "";
         });
 
         // 嚴謹的按讚切換邏輯
         window.likePost = async (id) => {
             const docRef = doc(db, "memos", id);
+            const isLiked = localStorage.getItem('liked_' + id);
             const docSnap = await getDoc(docRef);
             const currentLikes = docSnap.data().likes || 0;
-            const isLiked = localStorage.getItem('liked_' + id);
 
             if (!isLiked) {
-                // 若未按過，加 1
                 await updateDoc(docRef, { likes: increment(1) });
                 localStorage.setItem('liked_' + id, 'true');
             } else if (currentLikes > 0) {
-                // 若按過且數值大於 0，才減 1
                 await updateDoc(docRef, { likes: increment(-1) });
                 localStorage.removeItem('liked_' + id);
             }
@@ -77,14 +65,17 @@
 
         window.deletePost = async (id) => { if(confirm("確定刪除？")) await deleteDoc(doc(db, "memos", id)); };
 
-        // 渲染畫面
+        // 即時監聽渲染 (加入狀態同步檢查)
         const q = query(collection(db, "memos"), orderBy("timestamp", "desc"));
         onSnapshot(q, (snapshot) => {
             const list = document.getElementById("memoList");
             list.innerHTML = "";
             snapshot.forEach(docSnap => {
                 const data = docSnap.data();
-                const isLiked = localStorage.getItem('liked_' + docSnap.id);
+                const id = docSnap.id;
+                // 強制同步：只有在 localStorage 有紀錄且資料庫數值大於 0 時才顯示紅心
+                const isLiked = localStorage.getItem('liked_' + id) && (data.likes > 0);
+                
                 const div = document.createElement("div");
                 div.className = "post";
                 div.innerHTML = `
@@ -93,12 +84,11 @@
                         <strong>${data.name}</strong>
                     </div>
                     <p style="margin: 10px 0;">${data.content}</p>
-                    <div class="time">${data.timestamp?.toDate().toLocaleString()}</div>
                     <div class="actions">
-                        <button class="like-btn" onclick="likePost('${docSnap.id}')">
+                        <button class="like-btn" onclick="likePost('${id}')">
                             ${isLiked ? '❤️' : '🤍'} ${data.likes || 0}
                         </button>
-                        <span class="delete-btn" onclick="deletePost('${docSnap.id}')">刪除</span>
+                        <span class="delete-btn" onclick="deletePost('${id}')">刪除</span>
                     </div>
                 `;
                 list.appendChild(div);
