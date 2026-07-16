@@ -5,12 +5,14 @@
     <title>大家都在看 - 即時動態牆</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 20px; max-width: 500px; margin: auto; background: #f0f2f5; }
+        h1 { text-align: center; color: #333; }
         .post { background: #fff; border-radius: 12px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         .user-info { display: flex; align-items: center; margin-bottom: 10px; }
         .avatar { width: 35px; height: 35px; background: #0095f6; border-radius: 50%; margin-right: 10px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
         .time { color: #8e8e8e; font-size: 11px; margin-bottom: 8px; }
         .actions { margin-top: 12px; display: flex; gap: 15px; align-items: center; border-top: 1px solid #eee; padding-top: 10px; }
-        .like-btn { cursor: pointer; color: #ed4956; background: none; border: none; font-weight: bold; }
+        .like-btn { cursor: pointer; background: none; border: none; font-size: 16px; transition: transform 0.1s; }
+        .like-btn:active { transform: scale(1.3); }
         .delete-btn { cursor: pointer; color: #8e8e8e; font-size: 12px; }
         textarea { width: 100%; height: 80px; margin-bottom: 10px; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
         button#postBtn { width: 100%; padding: 12px; background: #0095f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: background 0.3s; }
@@ -38,6 +40,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
+        // 發文與 Loading 狀態
         document.getElementById("postBtn").addEventListener("click", async () => {
             const text = document.getElementById("postInput").value;
             const name = prompt("請設定你的暱稱：") || "匿名用戶";
@@ -54,15 +57,27 @@
             document.getElementById("postInput").value = "";
         });
 
-        window.likePost = async (id) => { await updateDoc(doc(db, "memos", id), { likes: increment(1) }); };
+        // 點讚切換邏輯 (Toggle Like)
+        window.likePost = async (id) => {
+            const isLiked = localStorage.getItem('liked_' + id);
+            const delta = isLiked ? -1 : 1;
+            
+            await updateDoc(doc(db, "memos", id), { likes: increment(delta) });
+            
+            if (isLiked) localStorage.removeItem('liked_' + id);
+            else localStorage.setItem('liked_' + id, 'true');
+        };
+
         window.deletePost = async (id) => { if(confirm("確定刪除？")) await deleteDoc(doc(db, "memos", id)); };
 
+        // 即時監聽與渲染
         const q = query(collection(db, "memos"), orderBy("timestamp", "desc"));
         onSnapshot(q, (snapshot) => {
             const list = document.getElementById("memoList");
             list.innerHTML = "";
             snapshot.forEach(docSnap => {
                 const data = docSnap.data();
+                const isLiked = localStorage.getItem('liked_' + docSnap.id);
                 const div = document.createElement("div");
                 div.className = "post";
                 div.innerHTML = `
@@ -70,10 +85,12 @@
                         <div class="avatar">${data.name.charAt(0)}</div>
                         <strong>${data.name}</strong>
                     </div>
-                    <p>${data.content}</p>
+                    <p style="margin: 10px 0;">${data.content}</p>
                     <div class="time">${data.timestamp?.toDate().toLocaleString()}</div>
                     <div class="actions">
-                        <button class="like-btn" onclick="likePost('${docSnap.id}')">❤️ ${data.likes || 0}</button>
+                        <button class="like-btn" onclick="likePost('${docSnap.id}')">
+                            ${isLiked ? '❤️' : '🤍'} ${data.likes || 0}
+                        </button>
                         <span class="delete-btn" onclick="deletePost('${docSnap.id}')">刪除</span>
                     </div>
                 `;
