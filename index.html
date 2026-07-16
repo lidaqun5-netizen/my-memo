@@ -4,14 +4,17 @@
     <meta charset="utf-8">
     <title>大家都在看 - 即時動態牆</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 20px; max-width: 500px; margin: auto; background: #fafafa; }
-        .post { background: #fff; border: 1px solid #dbdbdb; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 20px; max-width: 500px; margin: auto; background: #f0f2f5; }
+        .post { background: #fff; border-radius: 12px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .user-info { display: flex; align-items: center; margin-bottom: 10px; }
+        .avatar { width: 35px; height: 35px; background: #0095f6; border-radius: 50%; margin-right: 10px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
         .time { color: #8e8e8e; font-size: 11px; margin-bottom: 8px; }
-        .actions { margin-top: 10px; display: flex; gap: 15px; align-items: center; }
-        .like-btn { cursor: pointer; color: #ed4956; font-weight: bold; background: none; border: 1px solid #ed4956; padding: 5px 10px; border-radius: 5px; }
+        .actions { margin-top: 12px; display: flex; gap: 15px; align-items: center; border-top: 1px solid #eee; padding-top: 10px; }
+        .like-btn { cursor: pointer; color: #ed4956; background: none; border: none; font-weight: bold; }
         .delete-btn { cursor: pointer; color: #8e8e8e; font-size: 12px; }
-        textarea { width: 100%; height: 80px; margin-bottom: 10px; padding: 10px; border: 1px solid #dbdbdb; border-radius: 8px; box-sizing: border-box; }
-        button#postBtn { width: 100%; padding: 10px; background: #0095f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        textarea { width: 100%; height: 80px; margin-bottom: 10px; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        button#postBtn { width: 100%; padding: 12px; background: #0095f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: background 0.3s; }
+        button#postBtn:disabled { background: #a0d1ff; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -26,38 +29,49 @@
 
         const firebaseConfig = {
             apiKey: "AIzaSyDnF-e8BYtHKkqMGKLPL6-tCzh9SZHwGIE",
-            authDomain: "my-social-app-74cb5.firebaseapp.com",
             projectId: "my-social-app-74cb5",
             storageBucket: "my-social-app-74cb5.firebasestorage.app",
             messagingSenderId: "296934453383",
-            appId: "1:296934453383:web:c5135ba3c923e20c788822",
-            measurementId: "G-0VCRMP00CS"
+            appId: "1:296934453383:web:c5135ba3c923e20c788822"
         };
         
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // 發文功能
         document.getElementById("postBtn").addEventListener("click", async () => {
             const text = document.getElementById("postInput").value;
-            if (!text.trim()) return alert("請輸入內容喔！");
-            await addDoc(collection(db, "memos"), { content: text, timestamp: new Date(), likes: 0 });
+            const name = prompt("請設定你的暱稱：") || "匿名用戶";
+            if (!text.trim()) return alert("請輸入內容！");
+            
+            const btn = document.getElementById("postBtn");
+            btn.innerText = "發佈中...";
+            btn.disabled = true;
+
+            await addDoc(collection(db, "memos"), { content: text, name: name, timestamp: new Date(), likes: 0 });
+            
+            btn.innerText = "發佈貼文";
+            btn.disabled = false;
             document.getElementById("postInput").value = "";
         });
 
-        // 即時監聽貼文
+        window.likePost = async (id) => { await updateDoc(doc(db, "memos", id), { likes: increment(1) }); };
+        window.deletePost = async (id) => { if(confirm("確定刪除？")) await deleteDoc(doc(db, "memos", id)); };
+
         const q = query(collection(db, "memos"), orderBy("timestamp", "desc"));
         onSnapshot(q, (snapshot) => {
             const list = document.getElementById("memoList");
             list.innerHTML = "";
             snapshot.forEach(docSnap => {
                 const data = docSnap.data();
-                const time = data.timestamp?.toDate().toLocaleString();
                 const div = document.createElement("div");
                 div.className = "post";
                 div.innerHTML = `
-                    <div class="time">${time}</div>
+                    <div class="user-info">
+                        <div class="avatar">${data.name.charAt(0)}</div>
+                        <strong>${data.name}</strong>
+                    </div>
                     <p>${data.content}</p>
+                    <div class="time">${data.timestamp?.toDate().toLocaleString()}</div>
                     <div class="actions">
                         <button class="like-btn" onclick="likePost('${docSnap.id}')">❤️ ${data.likes || 0}</button>
                         <span class="delete-btn" onclick="deletePost('${docSnap.id}')">刪除</span>
@@ -66,16 +80,6 @@
                 list.appendChild(div);
             });
         });
-
-        // 綁定全域函式給按鈕使用
-        window.likePost = async (id) => {
-            await updateDoc(doc(db, "memos", id), { likes: increment(1) });
-        };
-        window.deletePost = async (id) => {
-            if(confirm("確定要刪除這則動態嗎？")) {
-                await deleteDoc(doc(db, "memos", id));
-            }
-        };
     </script>
 </body>
 </html>
