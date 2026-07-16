@@ -15,7 +15,7 @@
         .like-btn:active { transform: scale(1.3); }
         .delete-btn { cursor: pointer; color: #8e8e8e; font-size: 12px; }
         textarea { width: 100%; height: 80px; margin-bottom: 10px; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-        button#postBtn { width: 100%; padding: 12px; background: #0095f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: background 0.3s; }
+        button#postBtn { width: 100%; padding: 12px; background: #0095f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
         button#postBtn:disabled { background: #a0d1ff; cursor: not-allowed; }
     </style>
 </head>
@@ -27,7 +27,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, updateDoc, increment, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, updateDoc, increment, doc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDnF-e8BYtHKkqMGKLPL6-tCzh9SZHwGIE",
@@ -40,7 +40,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // 發文與 Loading 狀態
+        // 發文功能
         document.getElementById("postBtn").addEventListener("click", async () => {
             const text = document.getElementById("postInput").value;
             const name = prompt("請設定你的暱稱：") || "匿名用戶";
@@ -57,20 +57,27 @@
             document.getElementById("postInput").value = "";
         });
 
-        // 點讚切換邏輯 (Toggle Like)
+        // 嚴謹的按讚切換邏輯
         window.likePost = async (id) => {
+            const docRef = doc(db, "memos", id);
+            const docSnap = await getDoc(docRef);
+            const currentLikes = docSnap.data().likes || 0;
             const isLiked = localStorage.getItem('liked_' + id);
-            const delta = isLiked ? -1 : 1;
-            
-            await updateDoc(doc(db, "memos", id), { likes: increment(delta) });
-            
-            if (isLiked) localStorage.removeItem('liked_' + id);
-            else localStorage.setItem('liked_' + id, 'true');
+
+            if (!isLiked) {
+                // 若未按過，加 1
+                await updateDoc(docRef, { likes: increment(1) });
+                localStorage.setItem('liked_' + id, 'true');
+            } else if (currentLikes > 0) {
+                // 若按過且數值大於 0，才減 1
+                await updateDoc(docRef, { likes: increment(-1) });
+                localStorage.removeItem('liked_' + id);
+            }
         };
 
         window.deletePost = async (id) => { if(confirm("確定刪除？")) await deleteDoc(doc(db, "memos", id)); };
 
-        // 即時監聽與渲染
+        // 渲染畫面
         const q = query(collection(db, "memos"), orderBy("timestamp", "desc"));
         onSnapshot(q, (snapshot) => {
             const list = document.getElementById("memoList");
