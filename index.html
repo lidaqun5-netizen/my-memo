@@ -2,29 +2,30 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>大家都在看</title>
+    <title>我的社群牆</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 20px; max-width: 500px; margin: auto; background: #f0f2f5; }
-        h1 { text-align: center; color: #333; }
+        body { font-family: sans-serif; padding: 20px; max-width: 500px; margin: auto; background: #f0f2f5; }
         .post { background: #fff; border-radius: 12px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        .user-info { display: flex; align-items: center; margin-bottom: 10px; }
-        .avatar { width: 35px; height: 35px; background: #0095f6; border-radius: 50%; margin-right: 10px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
-        .actions { margin-top: 12px; display: flex; gap: 15px; align-items: center; border-top: 1px solid #eee; padding-top: 10px; }
-        .like-btn { cursor: pointer; background: none; border: none; font-size: 16px; transition: transform 0.1s; }
-        .like-btn:active { transform: scale(1.3); }
-        .delete-btn { cursor: pointer; color: #8e8e8e; font-size: 12px; }
-        textarea { width: 100%; height: 80px; margin-bottom: 10px; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-        button#postBtn { width: 100%; padding: 12px; background: #0095f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .login-box { text-align: center; margin-top: 50px; }
+        button { padding: 10px 20px; cursor: pointer; border-radius: 5px; border: none; background: #0095f6; color: white; }
     </style>
 </head>
 <body>
-    <h1>🔥 大家都在看</h1>
-    <textarea id="postInput" placeholder="現在有什麼熱門話題？跟大家分享吧！"></textarea>
-    <button id="postBtn">發佈貼文</button>
-    <div id="memoList" style="margin-top: 20px;"></div>
+    <div id="loginSection" class="login-box">
+        <h2>歡迎來到社群牆</h2>
+        <button id="loginBtn">使用 Google 登入</button>
+    </div>
+
+    <div id="appSection" style="display:none;">
+        <h3 id="userName"></h3>
+        <textarea id="postInput" placeholder="寫點什麼吧..."></textarea>
+        <button id="postBtn">發佈貼文</button>
+        <div id="memoList" style="margin-top: 20px;"></div>
+    </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, updateDoc, increment, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -36,65 +37,52 @@
         };
         
         const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
         const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        // 監聽登入狀態
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                document.getElementById("loginSection").style.display = "none";
+                document.getElementById("appSection").style.display = "block";
+                document.getElementById("userName").innerText = `你好, ${user.displayName}`;
+                loadPosts();
+            }
+        });
+
+        document.getElementById("loginBtn").onclick = () => signInWithPopup(auth, provider);
 
         // 發文功能
         document.getElementById("postBtn").addEventListener("click", async () => {
             const text = document.getElementById("postInput").value;
-            const name = prompt("請設定你的暱稱：") || "匿名用戶";
-            if (!text.trim()) return alert("請輸入內容！");
-            await addDoc(collection(db, "memos"), { content: text, name: name, timestamp: new Date(), likes: 0 });
+            const user = auth.currentUser;
+            if (!text.trim()) return;
+            await addDoc(collection(db, "memos"), { content: text, name: user.displayName, uid: user.uid, timestamp: new Date(), likes: 0 });
             document.getElementById("postInput").value = "";
         });
 
-        // 按讚切換邏輯 (大於 1 才紅，支援收回讚)
-        window.likePost = async (id, currentLikes) => {
-            // 邏輯：如果目前是 0，按下去變 1；如果目前 >= 1，按下去變下一級或收回
-            // 這裡設定：點擊即切換 (+1 或 -1)
-            // 為了簡化，我們用一個簡單的開關機制
-            const isLiked = localStorage.getItem('isLiked_' + id);
-            if (!isLiked) {
-                await updateDoc(doc(db, "memos", id), { likes: increment(1) });
-                localStorage.setItem('isLiked_' + id, 'true');
-            } else {
-                await updateDoc(doc(db, "memos", id), { likes: increment(-1) });
-                localStorage.removeItem('isLiked_' + id);
-            }
-        };
-
-        window.deletePost = async (id) => { if(confirm("確定刪除？")) await deleteDoc(doc(db, "memos", id)); };
-
-        // 即時監聽與渲染
-        const q = query(collection(db, "memos"), orderBy("timestamp", "desc"));
-        onSnapshot(q, (snapshot) => {
-            const list = document.getElementById("memoList");
-            list.innerHTML = "";
-            snapshot.forEach(docSnap => {
-                const data = docSnap.data();
-                const id = docSnap.id;
-                const likes = data.likes || 0;
-                
-                // 核心需求：讚數 > 1 顯示紅心
-                const isRed = likes > 1;
-                
-                const div = document.createElement("div");
-                div.className = "post";
-                div.innerHTML = `
-                    <div class="user-info">
-                        <div class="avatar">${data.name?.charAt(0) || '匿'}</div>
-                        <strong>${data.name || '匿名用戶'}</strong>
-                    </div>
-                    <p style="margin: 10px 0;">${data.content}</p>
-                    <div class="actions">
-                        <button class="like-btn" onclick="likePost('${id}', ${likes})">
-                            ${isRed ? '❤️' : '🤍'} ${likes}
+        // 讀取貼文
+        function loadPosts() {
+            onSnapshot(query(collection(db, "memos"), orderBy("timestamp", "desc")), (snapshot) => {
+                const list = document.getElementById("memoList");
+                list.innerHTML = "";
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    const div = document.createElement("div");
+                    div.className = "post";
+                    div.innerHTML = `
+                        <strong>${data.name}</strong>
+                        <p>${data.content}</p>
+                        <button onclick="updateDoc(doc(db, 'memos', '${docSnap.id}'), {likes: increment(${data.likes > 1 ? -1 : 1})})">
+                            ${data.likes > 1 ? '❤️' : '🤍'} ${data.likes}
                         </button>
-                        <span class="delete-btn" onclick="deletePost('${id}')">刪除</span>
-                    </div>
-                `;
-                list.appendChild(div);
+                        ${auth.currentUser.uid === data.uid ? `<button onclick="deleteDoc(doc(db, 'memos', '${docSnap.id}'))">刪除</button>` : ''}
+                    `;
+                    list.appendChild(div);
+                });
             });
-        });
+        }
     </script>
 </body>
 </html>
