@@ -8,7 +8,7 @@
         .post { background: #fff; border-radius: 12px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         .login-box { text-align: center; margin-top: 50px; }
         button { padding: 8px 15px; cursor: pointer; border-radius: 5px; border: none; background: #0095f6; color: white; margin-top: 5px; }
-        .liked { background-color: #ff7777 !important; }
+        .liked { background-color: #ff7777 !important; cursor: not-allowed !important; }
     </style>
 </head>
 <body>
@@ -60,12 +60,13 @@
         document.getElementById("postBtn").onclick = async () => {
             const text = document.getElementById("postInput").value;
             if (!text.trim()) return;
+            // 確保新貼文都有 likedBy 陣列
             await addDoc(collection(db, "memos"), { 
                 content: text, 
                 name: auth.currentUser.displayName, 
                 uid: auth.currentUser.uid, 
                 timestamp: new Date(), 
-                likedBy: [] // 使用陣列儲存按讚者
+                likedBy: [] 
             });
             document.getElementById("postInput").value = "";
         };
@@ -86,13 +87,20 @@
                     div.innerHTML = `
                         <strong>${data.name}</strong>
                         <p>${data.content}</p>
-                        <button id="like-${docSnap.id}" class="${isLiked ? 'liked' : ''}">❤️ ${likedBy.length}</button>
+                        <button id="like-${docSnap.id}" class="${isLiked ? 'liked' : ''}">
+                            ❤️ ${likedBy.length}
+                        </button>
                         ${isOwner ? `<button id="del-${docSnap.id}" style="background:#ff4444; color:white;">刪除</button>` : ''}
                     `;
                     list.appendChild(div);
 
-                    document.getElementById(`like-${docSnap.id}`).onclick = async () => {
-                        if (isLiked) return; // 已按過則直接鎖定
+                    // 愛心功能：若已經按過則不再執行
+                    const likeBtn = document.getElementById(`like-${docSnap.id}`);
+                    likeBtn.onclick = async () => {
+                        if (likedBy.includes(auth.currentUser.uid)) {
+                            alert("你已經按過讚囉！");
+                            return;
+                        }
                         await updateDoc(doc(db, 'memos', docSnap.id), { 
                             likedBy: arrayUnion(auth.currentUser.uid) 
                         });
