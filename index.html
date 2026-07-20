@@ -60,7 +60,7 @@
         document.getElementById("postBtn").onclick = async () => {
             const text = document.getElementById("postInput").value;
             if (!text.trim()) return;
-            // 確保新貼文都有 likedBy 陣列
+            // 建立新資料時，務必包含 likedBy: []
             await addDoc(collection(db, "memos"), { 
                 content: text, 
                 name: auth.currentUser.displayName, 
@@ -78,34 +78,38 @@
                 snapshot.forEach(docSnap => {
                     const data = docSnap.data();
                     const likedBy = data.likedBy || [];
-                    const isLiked = likedBy.includes(auth.currentUser.uid);
+                    const isLiked = likedBy.some(user => user.uid === auth.currentUser.uid);
                     const isOwner = auth.currentUser.uid === data.uid;
                     
+                    // 渲染頭像
+                    const avatarHtml = likedBy.map(user => 
+                        `<img src="${user.photo}" title="${user.uid}" style="width:30px; height:30px; border-radius:50%; margin-right:5px; margin-top:5px; border:1px solid #ddd;">`
+                    ).join('');
+
                     const div = document.createElement("div");
                     div.className = "post";
                     
                     div.innerHTML = `
                         <strong>${data.name}</strong>
                         <p>${data.content}</p>
-                        <button id="like-${docSnap.id}" class="${isLiked ? 'liked' : ''}">
-                            ❤️ ${likedBy.length}
-                        </button>
-                        ${isOwner ? `<button id="del-${docSnap.id}" style="background:#ff4444; color:white;">刪除</button>` : ''}
+                        <button id="like-${docSnap.id}" class="${isLiked ? 'liked' : ''}">❤️ ${likedBy.length}</button>
+                        <div style="display:flex; flex-wrap:wrap; margin-top:10px;">${avatarHtml}</div>
+                        ${isOwner ? `<button id="del-${docSnap.id}" style="background:#ff4444; color:white; display:block; margin-top:10px;">刪除貼文</button>` : ''}
                     `;
                     list.appendChild(div);
 
-                    // 愛心功能：若已經按過則不再執行
-                    const likeBtn = document.getElementById(`like-${docSnap.id}`);
-                    likeBtn.onclick = async () => {
-                        if (likedBy.includes(auth.currentUser.uid)) {
-                            alert("你已經按過讚囉！");
-                            return;
-                        }
+                    // 愛心功能
+                    document.getElementById(`like-${docSnap.id}`).onclick = async () => {
+                        if (isLiked) return;
                         await updateDoc(doc(db, 'memos', docSnap.id), { 
-                            likedBy: arrayUnion(auth.currentUser.uid) 
+                            likedBy: arrayUnion({
+                                uid: auth.currentUser.uid,
+                                photo: auth.currentUser.photoURL
+                            })
                         });
                     };
 
+                    // 刪除功能
                     if (isOwner) {
                         document.getElementById(`del-${docSnap.id}`).onclick = () => {
                             deleteDoc(doc(db, 'memos', docSnap.id));
