@@ -5,7 +5,6 @@
     <title>我的社群 App</title>
     <style>
         body { font-family: sans-serif; padding: 0; margin: 0; background: #fafafa; color: #262626; }
-        /* 頂部導覽列 */
         .navbar { display: flex; justify-content: space-around; background: #fff; border-bottom: 1px solid #dbdbdb; padding: 12px 0; position: fixed; top: 0; width: 100%; z-index: 100; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         .nav-btn { background: none; border: none; font-size: 16px; font-weight: bold; cursor: pointer; color: #8e8e8e; }
         .nav-btn.active { color: #0095f6; }
@@ -16,9 +15,11 @@
         .btn { padding: 8px 16px; cursor: pointer; border-radius: 4px; border: none; background: #0095f6; color: white; font-weight: bold; }
         .liked { color: #ed4956 !important; }
         
-        /* 聊天室清單與對話介面 */
+        .search-box { margin-bottom: 15px; display: flex; gap: 8px; }
+        .search-box input { flex: 1; padding: 8px 12px; border: 1px solid #dbdbdb; border-radius: 6px; outline: none; }
         .user-list-item { display: flex; align-items: center; background: #fff; border: 1px solid #dbdbdb; padding: 10px 15px; border-radius: 8px; margin-bottom: 10px; cursor: pointer; }
         .user-list-item img { width: 40px; height: 40px; border-radius: 50%; margin-right: 12px; object-fit: cover; }
+        
         .chat-box { background: #fff; border: 1px solid #dbdbdb; border-radius: 8px; height: 400px; display: flex; flex-direction: column; }
         .chat-messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
         .message-bubble { max-width: 70%; padding: 10px; border-radius: 12px; font-size: 14px; word-break: break-all; }
@@ -30,15 +31,12 @@
 </head>
 <body>
 
-    <!-- 登入畫面 -->
     <div id="loginSection" class="login-box">
         <h2>歡迎來到我的社群 App</h2>
         <button id="loginBtn" class="btn">使用 Google 登入</button>
     </div>
 
-    <!-- 登入後的 App 主結構 -->
     <div id="appSection" style="display:none;">
-        <!-- IG 風格導覽列 -->
         <div class="navbar">
             <button id="navHome" class="nav-btn active">🏠 主頁</button>
             <button id="navChat" class="nav-btn">💬 訊息</button>
@@ -46,7 +44,6 @@
         </div>
 
         <div class="container">
-            <!-- 視圖 1：主頁 (Feed) -->
             <div id="homeView">
                 <div style="background: #fff; border: 1px solid #dbdbdb; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
                     <textarea id="postInput" style="width:100%; height:60px; border:none; outline:none; resize:none;" placeholder="今天想分享什麼..."></textarea>
@@ -57,15 +54,18 @@
                 <div id="memoList"></div>
             </div>
 
-            <!-- 視圖 2：訊息清單與聊天室 (Direct Messages) -->
             <div id="chatView" style="display:none;">
                 <div id="chatUserList">
-                    <h3>所有使用者 (點擊即可私訊)</h3>
+                    <div class="search-box">
+                        <input type="text" id="searchInput" placeholder="輸入想搜尋的帳號代碼 (@username)...">
+                        <button id="searchBtn" class="btn">搜尋</button>
+                    </div>
+                    <h3>所有註冊使用者</h3>
                     <div id="targetUsers">載入中...</div>
                 </div>
                 
                 <div id="activeChatRoom" style="display:none;">
-                    <button id="backToList" class="btn" style="margin-bottom: 10px; background: #dbdbdb; color: #262626;">⬅ 返回訊息列表</button>
+                    <button id="backToList" class="btn" style="margin-bottom: 10px; background: #dbdbdb; color: #262626;">⬅ 返回列表</button>
                     <h3 id="chatWithTitle" style="margin-bottom: 10px;"></h3>
                     <div class="chat-box">
                         <div id="chatMessages" class="chat-messages"></div>
@@ -82,7 +82,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, updateDoc, doc, deleteDoc, arrayUnion, getDocs } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, updateDoc, doc, setDoc, getDoc, deleteDoc, arrayUnion, getDocs } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDnF-e8BYtHKkqMGKLPL6-tCzh9SZHwGIE",
@@ -99,8 +99,34 @@
         const provider = new GoogleAuthProvider();
         const defaultImg = "https://www.gravatar.com/avatar/?d=mp";
 
-        onAuthStateChanged(auth, (user) => {
+        let currentUserProfile = null;
+        let allUsersCache = [];
+
+        onAuthStateChanged(auth, async (user) => {
             if (user) {
+                const userDocRef = doc(db, "users", user.uid);
+                const userDocSnap = await getDoc(userDocRef);
+
+                let usernameVal = "tachun";
+                let photoVal = user.photoURL || defaultImg;
+                let nameVal = "看社交";
+
+                if (userDocSnap.exists()) {
+                    const data = userDocSnap.data();
+                    usernameVal = data.username || "tachun";
+                    nameVal = data.name || "看社交";
+                    photoVal = data.photo || photoVal;
+                }
+
+                currentUserProfile = {
+                    uid: user.uid,
+                    name: nameVal,
+                    username: usernameVal,
+                    photo: photoVal
+                };
+                
+                await setDoc(userDocRef, currentUserProfile, { merge: true });
+
                 document.getElementById("loginSection").style.display = "none";
                 document.getElementById("appSection").style.display = "block";
                 loadPosts();
@@ -114,7 +140,6 @@
         document.getElementById("loginBtn").onclick = () => signInWithPopup(auth, provider);
         document.getElementById("logoutBtn").onclick = () => signOut(auth);
 
-        // 頁面切換控制 (導覽列)
         const homeView = document.getElementById("homeView");
         const chatView = document.getElementById("chatView");
         const navHome = document.getElementById("navHome");
@@ -131,24 +156,23 @@
             homeView.style.display = "none";
             chatView.style.display = "block";
             navChat.classList.add("active");
-            navHome.classList.remove("active"); // 修正此處的括號
+            navHome.classList.remove("active");
         };
 
-        // 1. 發佈貼文
         document.getElementById("postBtn").onclick = async () => {
             const text = document.getElementById("postInput").value;
             if (!text.trim()) return;
             await addDoc(collection(db, "memos"), { 
                 content: text, 
-                name: auth.currentUser.displayName, 
-                uid: auth.currentUser.uid, 
+                name: currentUserProfile.name, 
+                username: currentUserProfile.username,
+                uid: currentUserProfile.uid, 
                 timestamp: new Date(), 
                 likedBy: [] 
             });
             document.getElementById("postInput").value = "";
         };
 
-        // 2. 載入主頁貼文
         function loadPosts() {
             onSnapshot(query(collection(db, "memos"), orderBy("timestamp", "desc")), (snapshot) => {
                 const list = document.getElementById("memoList");
@@ -167,7 +191,7 @@
                     const div = document.createElement("div");
                     div.className = "post";
                     div.innerHTML = `
-                        <strong>${data.name}</strong>
+                        <strong>${data.name || '看社交'}</strong> <span style="color:#8e8e8e; font-size:13px;">@${data.username || 'tachun'}</span>
                         <p style="margin: 10px 0;">${data.content}</p>
                         <div style="display:flex; align-items:center; gap:5px; margin-bottom:5px;">
                             <button id="like-${docSnap.id}" class="btn" style="background:none; border:none; font-size:20px; cursor:pointer;" class="${isLiked ? 'liked' : ''}">❤️</button>
@@ -181,7 +205,7 @@
                     document.getElementById(`like-${docSnap.id}`).onclick = async () => {
                         if (isLiked) return;
                         await updateDoc(doc(db, 'memos', docSnap.id), { 
-                            likedBy: arrayUnion({ uid: auth.currentUser.uid, photo: auth.currentUser.photoURL || defaultImg })
+                            likedBy: arrayUnion({ uid: auth.currentUser.uid, photo: currentUserProfile.photo })
                         });
                     };
 
@@ -192,43 +216,61 @@
             });
         }
 
-        // 3. 載入訊息頁面的使用者清單
         async function loadUserList() {
-            const querySnapshot = await getDocs(collection(db, "memos"));
-            const usersMap = new Map();
-            
-            querySnapshot.forEach(doc => {
-                const data = doc.data();
-                if (data.uid !== auth.currentUser.uid) {
-                    usersMap.set(data.uid, { name: data.name, photo: defaultImg });
+            const querySnapshot = await getDocs(collection(db, "users"));
+            allUsersCache = [];
+            querySnapshot.forEach(docSnap => {
+                const uData = docSnap.data();
+                if (uData.uid && uData.uid !== auth.currentUser.uid) {
+                    allUsersCache.push({
+                        uid: uData.uid,
+                        name: uData.name || "看社交",
+                        username: uData.username || "tachun",
+                        photo: uData.photo || defaultImg
+                    });
                 }
             });
+            renderUserList(allUsersCache);
+        }
 
+        function renderUserList(users) {
             const targetUsersDiv = document.getElementById("targetUsers");
             targetUsersDiv.innerHTML = "";
 
-            if (usersMap.size === 0) {
-                targetUsersDiv.innerHTML = `<p style="color:#888;">目前沒有其他使用者發文，快叫朋友一起登入！</p>`;
+            if (users.length === 0) {
+                targetUsersDiv.innerHTML = `<p style="color:#888;">目前沒有其他使用者。</p>`;
                 return;
             }
             
-            usersMap.forEach((userInfo, uid) => {
+            users.forEach(uData => {
                 const userItem = document.createElement("div");
                 userItem.className = "user-list-item";
                 userItem.innerHTML = `
-                    <img src="${userInfo.photo}">
-                    <div><strong>${userInfo.name}</strong></div>
+                    <img src="${uData.photo}">
+                    <div>
+                        <strong>${uData.name}</strong>
+                        <div style="color:#8e8e8e; font-size:12px;">@${uData.username}</div>
+                    </div>
                 `;
-                userItem.onclick = () => openChatRoom(uid, userInfo.name);
+                userItem.onclick = () => openChatRoom(uData.uid, uData.name, uData.username);
                 targetUsersDiv.appendChild(userItem);
             });
         }
 
-        // 4. 開啟一對一聊天室
-        function openChatRoom(targetUid, targetName) {
+        document.getElementById("searchBtn").onclick = () => {
+            const keyword = document.getElementById("searchInput").value.trim().toLowerCase();
+            if (!keyword) {
+                renderUserList(allUsersCache);
+                return;
+            }
+            const filtered = allUsersCache.filter(u => u.username.toLowerCase().includes(keyword));
+            renderUserList(filtered);
+        };
+
+        function openChatRoom(targetUid, targetName, targetUsername) {
             document.getElementById("chatUserList").style.display = "none";
             document.getElementById("activeChatRoom").style.display = "block";
-            document.getElementById("chatWithTitle").innerText = `與 ${targetName} 的聊天室`;
+            document.getElementById("chatWithTitle").innerText = `與 ${targetName} (@${targetUsername}) 的聊天室`;
 
             const chatId = [auth.currentUser.uid, targetUid].sort().join("_");
             const messagesRef = collection(db, "chats", chatId, "messages");
