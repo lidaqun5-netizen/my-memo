@@ -81,7 +81,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+        import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, updateDoc, doc, setDoc, getDoc, deleteDoc, arrayUnion, getDocs } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -102,6 +102,11 @@
         let currentUserProfile = null;
         let allUsersCache = [];
 
+        // 處理跳轉登入後的結果
+        getRedirectResult(auth).catch((error) => {
+            console.error("登入錯誤:", error);
+        });
+
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 const userDocRef = doc(db, "users", user.uid);
@@ -113,8 +118,8 @@
 
                 if (userDocSnap.exists()) {
                     const data = userDocSnap.data();
-                    usernameVal = data.username || "tachun";
-                    nameVal = data.name || "看社交";
+                    usernameVal = (data.username && data.username !== "undefined") ? data.username : "tachun";
+                    nameVal = (data.name && data.name !== "undefined") ? data.name : "看社交";
                     photoVal = data.photo || photoVal;
                 }
 
@@ -137,7 +142,10 @@
             }
         });
 
-        document.getElementById("loginBtn").onclick = () => signInWithPopup(auth, provider);
+        document.getElementById("loginBtn").onclick = () => {
+            signInWithRedirect(auth, provider);
+        };
+        
         document.getElementById("logoutBtn").onclick = () => signOut(auth);
 
         const homeView = document.getElementById("homeView");
@@ -183,6 +191,9 @@
                     const isLiked = likedBy.some(user => user.uid === auth.currentUser.uid);
                     const isOwner = auth.currentUser.uid === data.uid;
                     
+                    const postName = (data.name && data.name !== "undefined") ? data.name : "看社交";
+                    const postUsername = (data.username && data.username !== "undefined") ? data.username : "tachun";
+
                     const avatarHtml = likedBy.map(user => {
                         const imgSrc = user.photo ? user.photo : defaultImg;
                         return `<img src="${imgSrc}" style="width:24px; height:24px; border-radius:50%; margin-right:4px; object-fit:cover;">`;
@@ -191,7 +202,7 @@
                     const div = document.createElement("div");
                     div.className = "post";
                     div.innerHTML = `
-                        <strong>${data.name || '看社交'}</strong> <span style="color:#8e8e8e; font-size:13px;">@${data.username || 'tachun'}</span>
+                        <strong>${postName}</strong> <span style="color:#8e8e8e; font-size:13px;">@${postUsername}</span>
                         <p style="margin: 10px 0;">${data.content}</p>
                         <div style="display:flex; align-items:center; gap:5px; margin-bottom:5px;">
                             <button id="like-${docSnap.id}" class="btn" style="background:none; border:none; font-size:20px; cursor:pointer;" class="${isLiked ? 'liked' : ''}">❤️</button>
@@ -224,8 +235,8 @@
                 if (uData.uid && uData.uid !== auth.currentUser.uid) {
                     allUsersCache.push({
                         uid: uData.uid,
-                        name: uData.name || "看社交",
-                        username: uData.username || "tachun",
+                        name: (uData.name && uData.name !== "undefined") ? uData.name : "看社交",
+                        username: (uData.username && uData.username !== "undefined") ? uData.username : "tachun",
                         photo: uData.photo || defaultImg
                     });
                 }
@@ -243,16 +254,19 @@
             }
             
             users.forEach(uData => {
+                const displayName = (uData.name && uData.name !== "undefined") ? uData.name : "看社交";
+                const displayUsername = (uData.username && uData.username !== "undefined") ? uData.username : "tachun";
+
                 const userItem = document.createElement("div");
                 userItem.className = "user-list-item";
                 userItem.innerHTML = `
                     <img src="${uData.photo}">
                     <div>
-                        <strong>${uData.name}</strong>
-                        <div style="color:#8e8e8e; font-size:12px;">@${uData.username}</div>
+                        <strong>${displayName}</strong>
+                        <div style="color:#8e8e8e; font-size:12px;">@${displayUsername}</div>
                     </div>
                 `;
-                userItem.onclick = () => openChatRoom(uData.uid, uData.name, uData.username);
+                userItem.onclick = () => openChatRoom(uData.uid, displayName, displayUsername);
                 targetUsersDiv.appendChild(userItem);
             });
         }
