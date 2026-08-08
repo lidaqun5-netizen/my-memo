@@ -81,7 +81,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-        import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, updateDoc, doc, setDoc, getDoc, deleteDoc, arrayUnion, getDocs } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -101,11 +101,6 @@
 
         let currentUserProfile = null;
         let allUsersCache = [];
-
-        // 處理跳轉登入後的結果
-        getRedirectResult(auth).catch((error) => {
-            console.error("登入錯誤:", error);
-        });
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
@@ -142,10 +137,16 @@
             }
         });
 
-        document.getElementById("loginBtn").onclick = () => {
-            signInWithRedirect(auth, provider);
+        document.getElementById("loginBtn").onclick = async () => {
+            try {
+                console.log("準備執行 Google 登入...");
+                await signInWithPopup(auth, provider);
+            } catch (error) {
+                alert("錯誤代碼: " + error.code + "\n錯誤訊息: " + error.message);
+                console.error("完整錯誤:", error);
+            }
         };
-        
+
         document.getElementById("logoutBtn").onclick = () => signOut(auth);
 
         const homeView = document.getElementById("homeView");
