@@ -27,16 +27,34 @@
         .search-box { margin-bottom: 15px; display: flex; gap: 8px; }
         .search-box input { flex: 1; padding: 10px 12px; border: 1px solid #dbdbdb; border-radius: 6px; outline: none; font-size: 14px; }
         
-        .user-list-item { display: flex; align-items: center; background: #fff; border: 1px solid #dbdbdb; padding: 12px 15px; border-radius: 8px; margin-bottom: 10px; cursor: pointer; position: relative; }
+        .user-list-item { display: flex; align-items: center; background: #fff; border: 1px solid #dbdbdb; padding: 12px 15px; border-radius: 8px; margin-bottom: 10px; position: relative; justify-content: space-between; }
+        .user-info-area { display: flex; align-items: center; flex: 1; cursor: pointer; }
         .user-list-item img { width: 40px; height: 40px; border-radius: 50%; margin-right: 12px; object-fit: cover; }
         .user-unread-dot { width: 8px; height: 8px; background-color: #ed4956; border-radius: 50%; margin-right: 10px; flex-shrink: 0; }
         
-        .chat-box { background: #fff; border: 1px solid #dbdbdb; border-radius: 8px; height: 65vh; display: flex; flex-direction: column; }
+        /* 三個點選單樣式 */
+        .menu-container { position: relative; }
+        .menu-btn { background: none; border: none; font-size: 18px; cursor: pointer; padding: 5px 10px; color: #8e8e8e; }
+        .dropdown-menu { display: none; position: absolute; right: 0; top: 30px; background: #fff; border: 1px solid #dbdbdb; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 10; width: 100px; }
+        .dropdown-item { padding: 8px 12px; font-size: 13px; cursor: pointer; text-align: left; background: none; border: none; width: 100%; }
+        .dropdown-item:hover { background: #f0f0f0; }
+        .dropdown-item.danger { color: #ed4956; }
+
+        .chat-box { background: #fff; border: 1px solid #dbdbdb; border-radius: 8px; height: 60vh; display: flex; flex-direction: column; }
         .chat-messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
-        .message-bubble { max-width: 75%; padding: 10px 14px; border-radius: 12px; font-size: 14px; word-break: break-all; }
-        .message-me { background: #0095f6; color: white; align-self: flex-end; }
-        .message-other { background: #efefef; color: #262626; align-self: flex-start; }
+        .message-container { display: flex; flex-direction: column; max-width: 75%; }
+        .message-me { align-self: flex-end; align-items: flex-end; }
+        .message-other { align-self: flex-start; align-items: flex-start; }
         
+        .message-bubble { padding: 10px 14px; border-radius: 12px; font-size: 14px; word-break: break-all; cursor: pointer; }
+        .message-me .message-bubble { background: #0095f6; color: white; }
+        .message-other .message-bubble { background: #efefef; color: #262626; }
+        
+        .reply-quote { font-size: 12px; opacity: 0.8; border-left: 2px solid rgba(255,255,255,0.7); padding-left: 6px; margin-bottom: 4px; }
+        .message-other .reply-quote { border-left-color: #0095f6; }
+
+        .reply-preview-bar { display: none; background: #f0f0f0; padding: 8px 12px; font-size: 13px; border-top: 1px solid #dbdbdb; display: none; justify-content: space-between; align-items: center; }
+
         .chat-input-area { display: flex; padding: 10px; border-top: 1px solid #dbdbdb; gap: 8px; background: #fff; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; }
         .chat-input-area input { flex: 1; padding: 10px; border: 1px solid #dbdbdb; border-radius: 4px; outline: none; font-size: 14px; }
     </style>
@@ -91,13 +109,17 @@
                 </div>
                 
                 <div id="activeChatRoom" style="display:none;">
-                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                        <button id="backToList" class="btn" style="background: #dbdbdb; color: #262626;">⬅ 返回</button>
-                        <button id="deleteChatBtn" class="btn btn-danger">刪除對話</button>
-                    </div>
+                    <button id="backToList" class="btn" style="background: #dbdbdb; color: #262626; margin-bottom: 10px;">⬅ 返回</button>
                     <h3 id="chatWithTitle" style="margin-bottom: 10px; font-size: 16px;"></h3>
                     <div class="chat-box">
                         <div id="chatMessages" class="chat-messages"></div>
+                        
+                        <!-- 回覆預覽列 -->
+                        <div id="replyPreviewBar" class="reply-preview-bar">
+                            <span id="replyPreviewText" style="color: #555; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
+                            <button id="cancelReplyBtn" style="background:none; border:none; color:#ed4956; cursor:pointer; font-weight:bold;">✕</button>
+                        </div>
+
                         <div class="chat-input-area">
                             <input type="text" id="chatInput" placeholder="傳送訊息 (按 Enter 傳送)...">
                             <button id="sendChatBtn" class="btn">傳送</button>
@@ -124,11 +146,7 @@
         
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-
-        // 防止手機版自動登出
-        setPersistence(auth, browserLocalPersistence).catch((error) => {
-            console.error("登入持久性設定失敗:", error);
-        });
+        setPersistence(auth, browserLocalPersistence).catch((error) => console.error(error));
 
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
@@ -136,7 +154,8 @@
 
         let currentUserProfile = null;
         let allUsersCache = [];
-        const unreadStatus = {};
+        let pinnedUsers = JSON.parse(localStorage.getItem('pinned_users') || '[]'); // 記錄置頂用戶 UID
+        let replyingTo = null; // 當前回覆的訊息內容
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
@@ -287,6 +306,8 @@
             renderUserList(allUsersCache);
         }
 
+        const unreadStatus = {};
+
         function renderUserList(users) {
             const targetUsersDiv = document.getElementById("targetUsers");
             targetUsersDiv.innerHTML = "";
@@ -294,26 +315,89 @@
                 targetUsersDiv.innerHTML = `<p style="color:#888;">目前沒有其他使用者。</p>`;
                 return;
             }
+
+            // 排序：置頂的排在前面
+            users.sort((a, b) => {
+                const aPinned = pinnedUsers.includes(a.uid);
+                const bPinned = pinnedUsers.includes(b.uid);
+                return bPinned - aPinned;
+            });
+
             users.forEach(uData => {
                 const hasUnread = unreadStatus[uData.uid] || false;
+                const isPinned = pinnedUsers.includes(uData.uid);
+
                 const userItem = document.createElement("div");
                 userItem.className = "user-list-item";
                 userItem.innerHTML = `
-                    <div class="user-unread-dot" id="dot-${uData.uid}" style="display: ${hasUnread ? 'block' : 'none'};"></div>
-                    <img src="${uData.photo}">
-                    <div>
-                        <strong>${uData.name}</strong>
-                        <div style="color:#8e8e8e; font-size:12px;">@${uData.username}</div>
+                    <div class="user-info-area">
+                        <div class="user-unread-dot" id="dot-${uData.uid}" style="display: ${hasUnread ? 'block' : 'none'};"></div>
+                        <img src="${uData.photo}">
+                        <div>
+                            <strong>${uData.name}</strong> ${isPinned ? '<span style="color:#0095f6; font-size:12px;">📌 置頂</span>' : ''}
+                            <div style="color:#8e8e8e; font-size:12px;">@${uData.username}</div>
+                        </div>
+                    </div>
+                    <div class="menu-container">
+                        <button class="menu-btn" id="menu-btn-${uData.uid}">⋮</button>
+                        <div class="dropdown-menu" id="dropdown-${uData.uid}">
+                            <button class="dropdown-item" id="pin-${uData.uid}">${isPinned ? '取消置頂' : '置頂對話'}</button>
+                            <button class="dropdown-item danger" id="del-chat-${uData.uid}">刪除對話</button>
+                        </div>
                     </div>
                 `;
-                userItem.onclick = () => {
+
+                // 點擊主體進入聊天室
+                userItem.querySelector(".user-info-area").onclick = () => {
                     unreadStatus[uData.uid] = false;
                     document.getElementById(`dot-${uData.uid}`).style.display = "none";
                     openChatRoom(uData.uid, uData.name, uData.username);
                 };
+
+                // 三個點選單開關
+                const menuBtn = userItem.querySelector(`#menu-btn-${uData.uid}`);
+                const dropdown = userItem.querySelector(`#dropdown-${uData.uid}`);
+                menuBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    // 關閉其他選單
+                    document.querySelectorAll('.dropdown-menu').forEach(m => { if(m !== dropdown) m.style.display = 'none'; });
+                    dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+                };
+
+                // 置頂按鈕
+                userItem.querySelector(`#pin-${uData.uid}`).onclick = (e) => {
+                    e.stopPropagation();
+                    dropdown.style.display = 'none';
+                    if (isPinned) {
+                        pinnedUsers = pinnedUsers.filter(id => id !== uData.uid);
+                    } else {
+                        pinnedUsers.push(uData.uid);
+                    }
+                    localStorage.setItem('pinned_users', JSON.stringify(pinnedUsers));
+                    renderUserList(allUsersCache);
+                };
+
+                // 刪除對話按鈕
+                userItem.querySelector(`#del-chat-${uData.uid}`).onclick = async (e) => {
+                    e.stopPropagation();
+                    dropdown.style.display = 'none';
+                    if(!confirm(`確定要刪除與 ${uData.name} 的所有對話嗎？`)) return;
+                    const chatId = [auth.currentUser.uid, uData.uid].sort().join("_");
+                    const snap = await getDocs(collection(db, "chats", chatId, "messages"));
+                    const batch = writeBatch(db);
+                    snap.forEach(doc => batch.delete(doc.ref));
+                    await batch.commit();
+                    alert("對話已刪除");
+                };
+
                 targetUsersDiv.appendChild(userItem);
             });
         }
+
+        // 點擊其他地方關閉選單
+        window.onclick = () => {
+            document.querySelectorAll('.dropdown-menu').forEach(m => m.style.display = 'none');
+        };
 
         document.getElementById("searchBtn").onclick = () => {
             const keyword = document.getElementById("searchInput").value.trim().toLowerCase();
@@ -336,15 +420,43 @@
             onSnapshot(query(messagesRef, orderBy("timestamp", "asc")), (snapshot) => {
                 const msgContainer = document.getElementById("chatMessages");
                 msgContainer.innerHTML = "";
-                snapshot.forEach(doc => {
-                    const msg = doc.data();
-                    const bubble = document.createElement("div");
-                    bubble.className = `message-bubble ${msg.sender === auth.currentUser.uid ? 'message-me' : 'message-other'}`;
-                    bubble.innerText = msg.content;
-                    msgContainer.appendChild(bubble);
+                snapshot.forEach(docSnap => {
+                    const msg = docSnap.data();
+                    const isMe = msg.sender === auth.currentUser.uid;
+                    
+                    const msgWrapper = document.createElement("div");
+                    msgWrapper.className = `message-container ${isMe ? 'message-me' : 'message-other'}`;
+
+                    let replyHtml = '';
+                    if (msg.replyTo) {
+                        replyHtml = `<div class="reply-quote">回覆：${msg.replyTo}</div>`;
+                    }
+
+                    msgWrapper.innerHTML = `
+                        <div class="message-bubble">
+                            ${replyHtml}
+                            <div>${msg.content}</div>
+                        </div>
+                    `;
+
+                    // 點擊訊息即可「回覆」該則訊息
+                    msgWrapper.querySelector(".message-bubble").onclick = () => {
+                        replyingTo = msg.content;
+                        document.getElementById("replyPreviewText").innerText = `回覆：${msg.content}`;
+                        document.getElementById("replyPreviewBar").style.display = "flex";
+                        document.getElementById("chatInput").focus();
+                    };
+
+                    msgContainer.appendChild(msgWrapper);
                 });
                 msgContainer.scrollTop = msgContainer.scrollHeight;
             });
+
+            // 取消回覆
+            document.getElementById("cancelReplyBtn").onclick = () => {
+                replyingTo = null;
+                document.getElementById("replyPreviewBar").style.display = "none";
+            };
 
             const chatInput = document.getElementById("chatInput");
             chatInput.onkeypress = (e) => { 
@@ -354,16 +466,20 @@
             document.getElementById("sendChatBtn").onclick = async () => {
                 const text = chatInput.value;
                 if (!text.trim()) return;
-                await addDoc(messagesRef, { content: text, sender: auth.currentUser.uid, timestamp: new Date() });
-                chatInput.value = "";
-            };
 
-            document.getElementById("deleteChatBtn").onclick = async () => {
-                if(!confirm("確定要刪除所有對話紀錄嗎？")) return;
-                const snap = await getDocs(messagesRef);
-                const batch = writeBatch(db);
-                snap.forEach(doc => batch.delete(doc.ref));
-                await batch.commit();
+                const newMsg = {
+                    content: text,
+                    sender: auth.currentUser.uid,
+                    timestamp: new Date()
+                };
+                if (replyingTo) {
+                    newMsg.replyTo = replyingTo;
+                }
+
+                await addDoc(messagesRef, newMsg);
+                chatInput.value = "";
+                replyingTo = null;
+                document.getElementById("replyPreviewBar").style.display = "none";
             };
         }
 
