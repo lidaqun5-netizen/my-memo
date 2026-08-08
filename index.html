@@ -8,8 +8,11 @@
         .navbar { display: flex; justify-content: space-between; align-items: center; background: #fff; border-bottom: 1px solid #dbdbdb; padding: 0 20px; position: fixed; top: 0; width: 100%; height: 50px; z-index: 100; box-sizing: border-box; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         .nav-brand { font-weight: bold; font-size: 18px; color: #262626; }
         .nav-center { display: flex; gap: 30px; }
-        .nav-btn { background: none; border: none; font-size: 16px; font-weight: bold; cursor: pointer; color: #8e8e8e; }
+        .nav-btn { background: none; border: none; font-size: 16px; font-weight: bold; cursor: pointer; color: #8e8e8e; position: relative; }
         .nav-btn.active { color: #0095f6; }
+        
+        /* 未讀紅點樣式 */
+        .badge { display: none; position: absolute; top: -2px; right: -8px; width: 8px; height: 8px; background-color: #ed4956; border-radius: 50%; }
         
         .container { max-width: 470px; margin: 70px auto 20px auto; padding: 10px; }
         .post { background: #fff; border: 1px solid #dbdbdb; border-radius: 8px; padding: 15px; margin-bottom: 20px; }
@@ -28,8 +31,9 @@
         .chat-box { background: #fff; border: 1px solid #dbdbdb; border-radius: 8px; height: 400px; display: flex; flex-direction: column; }
         .chat-messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
         .message-bubble { max-width: 70%; padding: 10px; border-radius: 12px; font-size: 14px; word-break: break-all; }
-        .message-me { background: #efefef; align-self: flex-end; }
-        .message-other { background: #0095f6; color: white; align-self: flex-start; }
+        .message-me { background: #0095f6; color: white; align-self: flex-end; }
+        .message-other { background: #efefef; color: #262626; align-self: flex-start; }
+        
         .chat-input-area { display: flex; padding: 10px; border-top: 1px solid #dbdbdb; gap: 8px; }
         .chat-input-area input { flex: 1; padding: 8px; border: 1px solid #dbdbdb; border-radius: 4px; outline: none; }
     </style>
@@ -46,13 +50,16 @@
             <div class="nav-brand">看社交</div>
             <div class="nav-center">
                 <button id="navHome" class="nav-btn active">🏠 主頁</button>
-                <button id="navChat" class="nav-btn">💬 訊息</button>
+                <button id="navChat" class="nav-btn">
+                    💬 訊息
+                    <span id="unreadBadge" class="badge"></span>
+                </button>
             </div>
             <button id="logoutBtn" class="nav-btn" style="color: #ed4956; font-size: 14px;">登出</button>
         </div>
 
         <div class="container">
-            <div class="user-profile-banner">
+            <div id="userProfileBanner" class="user-profile-banner">
                 <img id="myAvatar" src="" alt="大頭貼">
                 <div>
                     <h3 id="myName" style="margin: 0 0 4px 0;"></h3>
@@ -117,13 +124,13 @@
 
         let currentUserProfile = null;
         let allUsersCache = [];
+        let activeListeners = [];
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 const userDocRef = doc(db, "users", user.uid);
                 const userDocSnap = await getDoc(userDocRef);
 
-                // 強制使用 Google 登入的真實名字 (displayName)
                 let nameVal = user.displayName || "使用者";
                 let usernameVal = user.email ? user.email.split('@')[0] : "user_" + user.uid.substring(0, 5);
                 let photoVal = user.photoURL || defaultImg;
@@ -151,6 +158,7 @@
                 document.getElementById("appSection").style.display = "block";
                 loadPosts();
                 loadUserList();
+                listenToAllChats(); // 開始監聽所有聊天室以判斷是否有新訊息
             } else {
                 document.getElementById("loginSection").style.display = "block";
                 document.getElementById("appSection").style.display = "none";
@@ -171,10 +179,13 @@
         const chatView = document.getElementById("chatView");
         const navHome = document.getElementById("navHome");
         const navChat = document.getElementById("navChat");
+        const userProfileBanner = document.getElementById("userProfileBanner");
+        const unreadBadge = document.getElementById("unreadBadge");
 
         navHome.onclick = () => {
             homeView.style.display = "block";
             chatView.style.display = "none";
+            userProfileBanner.style.display = "flex";
             navHome.classList.add("active");
             navChat.classList.remove("active");
         };
@@ -182,9 +193,34 @@
         navChat.onclick = () => {
             homeView.style.display = "none";
             chatView.style.display = "block";
+            userProfileBanner.style.display = "none";
             navChat.classList.add("active");
             navHome.classList.remove("active");
+            unreadBadge.style.display = "none"; // 點進訊息頁面後清除紅點
         };
+
+        // 監聽所有其他使用者，檢查是否有別人傳送的新訊息
+        async function listenToAllChats() {
+            const querySnapshot = await getDocs(collection(db, "users"));
+            querySnapshot.forEach(docSnap => {
+                const uData = docSnap.data();
+                if (uData.uid && uData.uid !== auth.currentUser.uid) {
+                    const chatId = [auth.currentUser.uid, uData.uid].sort().join("_");
+                    const messagesRef = collection(db, "chats", chatId, "messages");
+                    
+                    const unsubscribe = onSnapshot(query(messagesRef, orderBy("timestamp", "desc")), (snapshot) => {
+                        if (!snapshot.empty) {
+                            const latestMsg = snapshot.docs[0].data();
+                            // 如果最新的一則訊息不是我發的，且目前不在訊息頁面，就顯示紅點
+                            if (latestMsg.sender !== auth.currentUser.uid && chatView.style.display === "none") {
+                                unreadBadge.style.display = "block";
+                            }
+                        }
+                    });
+                    activeListeners.push(unsubscribe);
+                }
+            });
+        }
 
         document.getElementById("postBtn").onclick = async () => {
             const text = document.getElementById("postInput").value;
