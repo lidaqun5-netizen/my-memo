@@ -5,7 +5,9 @@
     <title>我的社群 App</title>
     <style>
         body { font-family: sans-serif; padding: 0; margin: 0; background: #fafafa; color: #262626; }
-        .navbar { display: flex; justify-content: space-around; background: #fff; border-bottom: 1px solid #dbdbdb; padding: 12px 0; position: fixed; top: 0; width: 100%; z-index: 100; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .navbar { display: flex; justify-content: space-between; align-items: center; background: #fff; border-bottom: 1px solid #dbdbdb; padding: 0 20px; position: fixed; top: 0; width: 100%; height: 50px; z-index: 100; box-sizing: border-box; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .nav-brand { font-weight: bold; font-size: 18px; color: #262626; }
+        .nav-center { display: flex; gap: 30px; }
         .nav-btn { background: none; border: none; font-size: 16px; font-weight: bold; cursor: pointer; color: #8e8e8e; }
         .nav-btn.active { color: #0095f6; }
         
@@ -41,13 +43,15 @@
 
     <div id="appSection" style="display:none;">
         <div class="navbar">
-            <button id="navHome" class="nav-btn active">🏠 主頁</button>
-            <button id="navChat" class="nav-btn">💬 訊息</button>
-            <button id="logoutBtn" class="nav-btn" style="color: #ed4956;">登出</button>
+            <div class="nav-brand">看社交</div>
+            <div class="nav-center">
+                <button id="navHome" class="nav-btn active">🏠 主頁</button>
+                <button id="navChat" class="nav-btn">💬 訊息</button>
+            </div>
+            <button id="logoutBtn" class="nav-btn" style="color: #ed4956; font-size: 14px;">登出</button>
         </div>
 
         <div class="container">
-            <!-- 顯示我的個人資訊與代碼列 -->
             <div class="user-profile-banner">
                 <img id="myAvatar" src="" alt="大頭貼">
                 <div>
@@ -119,15 +123,15 @@
                 const userDocRef = doc(db, "users", user.uid);
                 const userDocSnap = await getDoc(userDocRef);
 
-                let usernameVal = "tachun";
+                // 強制使用 Google 登入的真實名字 (displayName)
+                let nameVal = user.displayName || "使用者";
+                let usernameVal = user.email ? user.email.split('@')[0] : "user_" + user.uid.substring(0, 5);
                 let photoVal = user.photoURL || defaultImg;
-                let nameVal = "看社交";
 
                 if (userDocSnap.exists()) {
                     const data = userDocSnap.data();
-                    usernameVal = (data.username && data.username !== "undefined") ? data.username : "tachun";
-                    nameVal = (data.name && data.name !== "undefined") ? data.name : "看社交";
-                    photoVal = data.photo || photoVal;
+                    if (data.username && data.username !== "undefined") usernameVal = data.username;
+                    if (data.photo) photoVal = data.photo;
                 }
 
                 currentUserProfile = {
@@ -139,7 +143,6 @@
                 
                 await setDoc(userDocRef, currentUserProfile, { merge: true });
 
-                // 將我的資料渲染到畫面上方的橫幅
                 document.getElementById("myAvatar").src = currentUserProfile.photo;
                 document.getElementById("myName").innerText = currentUserProfile.name;
                 document.getElementById("myUsername").innerText = `@${currentUserProfile.username}`;
@@ -207,8 +210,8 @@
                     const isLiked = likedBy.some(user => user.uid === auth.currentUser.uid);
                     const isOwner = auth.currentUser.uid === data.uid;
                     
-                    const postName = (data.name && data.name !== "undefined") ? data.name : "看社交";
-                    const postUsername = (data.username && data.username !== "undefined") ? data.username : "tachun";
+                    const postName = (data.name && data.name !== "看社交" && data.name !== "undefined") ? data.name : "使用者";
+                    const postUsername = (data.username && data.username !== "undefined") ? data.username : "user";
 
                     const avatarHtml = likedBy.map(user => {
                         const imgSrc = user.photo ? user.photo : defaultImg;
@@ -251,8 +254,8 @@
                 if (uData.uid && uData.uid !== auth.currentUser.uid) {
                     allUsersCache.push({
                         uid: uData.uid,
-                        name: (uData.name && uData.name !== "undefined") ? uData.name : "看社交",
-                        username: (uData.username && uData.username !== "undefined") ? uData.username : "tachun",
+                        name: (uData.name && uData.name !== "看社交" && uData.name !== "undefined") ? uData.name : "使用者",
+                        username: (uData.username && uData.username !== "undefined") ? uData.username : "user",
                         photo: uData.photo || defaultImg
                     });
                 }
@@ -270,8 +273,8 @@
             }
             
             users.forEach(uData => {
-                const displayName = (uData.name && uData.name !== "undefined") ? uData.name : "看社交";
-                const displayUsername = (uData.username && uData.username !== "undefined") ? uData.username : "tachun";
+                const displayName = (uData.name && uData.name !== "看社交" && uData.name !== "undefined") ? uData.name : "使用者";
+                const displayUsername = (uData.username && uData.username !== "undefined") ? uData.username : "user";
 
                 const userItem = document.createElement("div");
                 userItem.className = "user-list-item";
@@ -300,7 +303,7 @@
         function openChatRoom(targetUid, targetName, targetUsername) {
             document.getElementById("chatUserList").style.display = "none";
             document.getElementById("activeChatRoom").style.display = "block";
-            document.getElementById("chatWithTitle",).innerText = `與 ${targetName} (@${targetUsername}) 的聊天室`;
+            document.getElementById("chatWithTitle").innerText = `與 ${targetName} (@${targetUsername}) 的聊天室`;
 
             const chatId = [auth.currentUser.uid, targetUid].sort().join("_");
             const messagesRef = collection(db, "chats", chatId, "messages");
