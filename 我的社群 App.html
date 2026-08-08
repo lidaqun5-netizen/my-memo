@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
-<head>
-    <meta charset="utf-8">
+<!-- saved from url=(0043)https://lidaqun5-netizen.github.io/my-memo/ -->
+<html lang="zh-Hant"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>我的社群 App</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 0; margin: 0; background: #fafafa; color: #262626; }
         .navbar { display: flex; justify-content: space-between; align-items: center; background: #fff; border-bottom: 1px solid #dbdbdb; padding: 0 15px; position: fixed; top: 0; width: 100%; height: 50px; z-index: 100; box-sizing: border-box; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .nav-brand { font-weight: bold; font-size: 18px; color: #262626; cursor: pointer; }
+        .nav-brand { font-weight: bold; font-size: 18px; color: #262626; }
         .nav-center { display: flex; gap: 30px; }
         .nav-btn { background: none; border: none; font-size: 16px; font-weight: bold; cursor: pointer; color: #8e8e8e; position: relative; }
         .nav-btn.active { color: #0095f6; }
@@ -32,6 +32,7 @@
         .user-list-item img { width: 40px; height: 40px; border-radius: 50%; margin-right: 12px; object-fit: cover; }
         .user-unread-dot { width: 8px; height: 8px; background-color: #ed4956; border-radius: 50%; margin-right: 10px; flex-shrink: 0; }
         
+        /* 三個點選單樣式 */
         .menu-container { position: relative; }
         .menu-btn { background: none; border: none; font-size: 18px; cursor: pointer; padding: 5px 10px; color: #8e8e8e; }
         .dropdown-menu { display: none; position: absolute; right: 0; top: 30px; background: #fff; border: 1px solid #dbdbdb; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 10; width: 100px; }
@@ -52,22 +53,22 @@
         .reply-quote { font-size: 12px; opacity: 0.8; border-left: 2px solid rgba(255,255,255,0.7); padding-left: 6px; margin-bottom: 4px; }
         .message-other .reply-quote { border-left-color: #0095f6; }
 
-        .reply-preview-bar { display: none; background: #f0f0f0; padding: 8px 12px; font-size: 13px; border-top: 1px solid #dbdbdb; justify-content: space-between; align-items: center; }
+        .reply-preview-bar { display: none; background: #f0f0f0; padding: 8px 12px; font-size: 13px; border-top: 1px solid #dbdbdb; display: none; justify-content: space-between; align-items: center; }
 
         .chat-input-area { display: flex; padding: 10px; border-top: 1px solid #dbdbdb; gap: 8px; background: #fff; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; }
         .chat-input-area input { flex: 1; padding: 10px; border: 1px solid #dbdbdb; border-radius: 4px; outline: none; font-size: 14px; }
     </style>
-</head>
+<script src="./我的社群 App_files/cb=gapi.loaded_0" async=""></script><script src="./我的社群 App_files/api.js" type="text/javascript" charset="UTF-8" gapi_processed="true"></script></head>
 <body>
 
-    <div id="loginSection" class="login-box">
+    <div id="loginSection" class="login-box" style="display: none;">
         <h2>歡迎來到我的社群 App</h2>
         <button id="loginBtn" class="btn">使用 Google 登入</button>
     </div>
 
-    <div id="appSection" style="display:none;">
+    <div id="appSection" style="display: block;">
         <div class="navbar">
-            <div id="navBrand" class="nav-brand">看社交</div>
+            <div class="nav-brand">看社交</div>
             <div class="nav-center">
                 <button id="navHome" class="nav-btn active">🏠 主頁</button>
                 <button id="navChat" class="nav-btn">
@@ -80,10 +81,10 @@
 
         <div class="container">
             <div id="userProfileBanner" class="user-profile-banner">
-                <img id="myAvatar" src="" alt="大頭貼">
+                <img id="myAvatar" src="./我的社群 App_files/unnamed.png" alt="大頭貼">
                 <div>
-                    <h3 id="myName" style="margin: 0 0 4px 0;"></h3>
-                    <div id="myUsername" style="color: #8e8e8e; font-size: 14px;"></div>
+                    <h3 id="myName" style="margin: 0 0 4px 0;">李大群</h3>
+                    <div id="myUsername" style="color: #8e8e8e; font-size: 14px;">@tachun</div>
                 </div>
             </div>
 
@@ -94,7 +95,16 @@
                         <button id="postBtn" class="btn">發佈</button>
                     </div>
                 </div>
-                <div id="memoList"></div>
+                <div id="memoList"><div class="post">
+                        <strong>Ethan Yen</strong> <span style="color:#8e8e8e; font-size:13px;">@ethanyen0927</span>
+                        <p style="margin: 10px 0;">我是顏鴻旭</p>
+                        <div style="display:flex; align-items:center; gap:5px; margin-bottom:5px;">
+                            <button id="like-mMrHa6TxcYresfIcCRXO" style="background:none; border:none; font-size:20px; cursor:pointer;" class="liked">❤️</button>
+                            <span>2 個讚</span>
+                        </div>
+                        <div style="display:flex; align-items:center; flex-wrap:wrap; font-size:12px; color:#666;"><img src="./我的社群 App_files/unnamed.png" style="width:24px; height:24px; border-radius:50%; margin-right:4px; object-fit:cover;"><img src="./我的社群 App_files/unnamed.jpg" style="width:24px; height:24px; border-radius:50%; margin-right:4px; object-fit:cover;"> 覺得很讚</div>
+                        
+                    </div></div>
             </div>
 
             <div id="chatView" style="display:none;">
@@ -104,7 +114,39 @@
                         <button id="searchBtn" class="btn">搜尋</button>
                     </div>
                     <h3>所有註冊使用者</h3>
-                    <div id="targetUsers">載入中...</div>
+                    <div id="targetUsers"><div class="user-list-item">
+                    <div class="user-info-area">
+                        <div class="user-unread-dot" id="dot-O7eegVJldVgLiRBHv0KUXlVeP9n1" style="display: none;"></div>
+                        <img src="./我的社群 App_files/unnamed.jpg">
+                        <div>
+                            <strong>滷大腸</strong> 
+                            <div style="color:#8e8e8e; font-size:12px;">@lidaqun98</div>
+                        </div>
+                    </div>
+                    <div class="menu-container">
+                        <button class="menu-btn" id="menu-btn-O7eegVJldVgLiRBHv0KUXlVeP9n1">⋮</button>
+                        <div class="dropdown-menu" id="dropdown-O7eegVJldVgLiRBHv0KUXlVeP9n1" style="display: none;">
+                            <button class="dropdown-item" id="pin-O7eegVJldVgLiRBHv0KUXlVeP9n1">置頂對話</button>
+                            <button class="dropdown-item danger" id="del-chat-O7eegVJldVgLiRBHv0KUXlVeP9n1">刪除對話</button>
+                        </div>
+                    </div>
+                </div><div class="user-list-item">
+                    <div class="user-info-area">
+                        <div class="user-unread-dot" id="dot-iQ2qmT7grYQyfbrC2XBnBKEChWW2" style="display: none;"></div>
+                        <img src="./我的社群 App_files/unnamed(1).jpg">
+                        <div>
+                            <strong>Ethan Yen</strong> 
+                            <div style="color:#8e8e8e; font-size:12px;">@ethanyen0927</div>
+                        </div>
+                    </div>
+                    <div class="menu-container">
+                        <button class="menu-btn" id="menu-btn-iQ2qmT7grYQyfbrC2XBnBKEChWW2">⋮</button>
+                        <div class="dropdown-menu" id="dropdown-iQ2qmT7grYQyfbrC2XBnBKEChWW2" style="display: none;">
+                            <button class="dropdown-item" id="pin-iQ2qmT7grYQyfbrC2XBnBKEChWW2">置頂對話</button>
+                            <button class="dropdown-item danger" id="del-chat-iQ2qmT7grYQyfbrC2XBnBKEChWW2">刪除對話</button>
+                        </div>
+                    </div>
+                </div></div>
                 </div>
                 
                 <div id="activeChatRoom" style="display:none;">
@@ -113,6 +155,7 @@
                     <div class="chat-box">
                         <div id="chatMessages" class="chat-messages"></div>
                         
+                        <!-- 回覆預覽列 -->
                         <div id="replyPreviewBar" class="reply-preview-bar">
                             <span id="replyPreviewText" style="color: #555; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
                             <button id="cancelReplyBtn" style="background:none; border:none; color:#ed4956; cursor:pointer; font-weight:bold;">✕</button>
@@ -152,8 +195,8 @@
 
         let currentUserProfile = null;
         let allUsersCache = [];
-        let pinnedUsers = JSON.parse(localStorage.getItem('pinned_users') || '[]');
-        let replyingTo = null;
+        let pinnedUsers = JSON.parse(localStorage.getItem('pinned_users') || '[]'); // 記錄置頂用戶 UID
+        let replyingTo = null; // 當前回覆的訊息內容
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
@@ -191,21 +234,8 @@
         const chatView = document.getElementById("chatView");
         const navHome = document.getElementById("navHome");
         const navChat = document.getElementById("navChat");
-        const navBrand = document.getElementById("navBrand");
         const userProfileBanner = document.getElementById("userProfileBanner");
         const unreadBadge = document.getElementById("unreadBadge");
-
-        // 點擊左上角「看社交」返回主頁
-        navBrand.onclick = () => {
-            homeView.style.display = "block";
-            chatView.style.display = "none";
-            userProfileBanner.style.display = "flex";
-            navHome.classList.add("active");
-            navChat.classList.remove("active");
-            // 同時把聊天室內部狀態也重置回列表
-            document.getElementById("activeChatRoom").style.display = "none";
-            document.getElementById("chatUserList").style.display = "block";
-        };
 
         navHome.onclick = () => {
             homeView.style.display = "block";
@@ -327,6 +357,7 @@
                 return;
             }
 
+            // 排序：置頂的排在前面
             users.sort((a, b) => {
                 const aPinned = pinnedUsers.includes(a.uid);
                 const bPinned = pinnedUsers.includes(b.uid);
@@ -357,20 +388,24 @@
                     </div>
                 `;
 
+                // 點擊主體進入聊天室
                 userItem.querySelector(".user-info-area").onclick = () => {
                     unreadStatus[uData.uid] = false;
                     document.getElementById(`dot-${uData.uid}`).style.display = "none";
                     openChatRoom(uData.uid, uData.name, uData.username);
                 };
 
+                // 三個點選單開關
                 const menuBtn = userItem.querySelector(`#menu-btn-${uData.uid}`);
                 const dropdown = userItem.querySelector(`#dropdown-${uData.uid}`);
                 menuBtn.onclick = (e) => {
                     e.stopPropagation();
+                    // 關閉其他選單
                     document.querySelectorAll('.dropdown-menu').forEach(m => { if(m !== dropdown) m.style.display = 'none'; });
                     dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
                 };
 
+                // 置頂按鈕
                 userItem.querySelector(`#pin-${uData.uid}`).onclick = (e) => {
                     e.stopPropagation();
                     dropdown.style.display = 'none';
@@ -383,6 +418,7 @@
                     renderUserList(allUsersCache);
                 };
 
+                // 刪除對話按鈕
                 userItem.querySelector(`#del-chat-${uData.uid}`).onclick = async (e) => {
                     e.stopPropagation();
                     dropdown.style.display = 'none';
@@ -399,6 +435,7 @@
             });
         }
 
+        // 點擊其他地方關閉選單
         window.onclick = () => {
             document.querySelectorAll('.dropdown-menu').forEach(m => m.style.display = 'none');
         };
@@ -443,6 +480,7 @@
                         </div>
                     `;
 
+                    // 點擊訊息即可「回覆」該則訊息
                     msgWrapper.querySelector(".message-bubble").onclick = () => {
                         replyingTo = msg.content;
                         document.getElementById("replyPreviewText").innerText = `回覆：${msg.content}`;
@@ -455,6 +493,7 @@
                 msgContainer.scrollTop = msgContainer.scrollHeight;
             });
 
+            // 取消回覆
             document.getElementById("cancelReplyBtn").onclick = () => {
                 replyingTo = null;
                 document.getElementById("replyPreviewBar").style.display = "none";
@@ -491,5 +530,5 @@
             renderUserList(allUsersCache);
         };
     </script>
-</body>
-</html>
+
+<iframe ng-non-bindable="" frameborder="0" hspace="0" marginheight="0" marginwidth="0" scrolling="no" tabindex="-1" vspace="0" width="100%" aria-hidden="true" id="I0_1786185193944" name="I0_1786185193944" src="./我的社群 App_files/iframe.html" style="position: absolute; top: -100px; width: 1px; height: 1px;"></iframe></body></html>
