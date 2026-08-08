@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-Hant">
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>我的社群 App</title>
     <style>
-        body { font-family: sans-serif; padding: 0; margin: 0; background: #fafafa; color: #262626; }
-        .navbar { display: flex; justify-content: space-between; align-items: center; background: #fff; border-bottom: 1px solid #dbdbdb; padding: 0 20px; position: fixed; top: 0; width: 100%; height: 50px; z-index: 100; box-sizing: border-box; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 0; margin: 0; background: #fafafa; color: #262626; }
+        .navbar { display: flex; justify-content: space-between; align-items: center; background: #fff; border-bottom: 1px solid #dbdbdb; padding: 0 15px; position: fixed; top: 0; width: 100%; height: 50px; z-index: 100; box-sizing: border-box; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         .nav-brand { font-weight: bold; font-size: 18px; color: #262626; }
         .nav-center { display: flex; gap: 30px; }
         .nav-btn { background: none; border: none; font-size: 16px; font-weight: bold; cursor: pointer; color: #8e8e8e; position: relative; }
@@ -13,31 +14,31 @@
         
         .badge { display: none; position: absolute; top: -2px; right: -8px; width: 8px; height: 8px; background-color: #ed4956; border-radius: 50%; }
         
-        .container { max-width: 470px; margin: 70px auto 20px auto; padding: 10px; }
+        .container { width: 100%; max-width: 500px; margin: 65px auto 20px auto; padding: 10px; box-sizing: border-box; }
         .post { background: #fff; border: 1px solid #dbdbdb; border-radius: 8px; padding: 15px; margin-bottom: 20px; }
         .login-box { text-align: center; margin-top: 100px; padding: 20px; }
-        .btn { padding: 8px 16px; cursor: pointer; border-radius: 4px; border: none; background: #0095f6; color: white; font-weight: bold; }
+        .btn { padding: 8px 16px; cursor: pointer; border-radius: 4px; border: none; background: #0095f6; color: white; font-weight: bold; font-size: 14px; }
+        .btn-danger { background: #ed4956; }
         .liked { color: #ed4956 !important; }
         
         .user-profile-banner { background: #fff; border: 1px solid #dbdbdb; border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; }
         .user-profile-banner img { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; }
 
         .search-box { margin-bottom: 15px; display: flex; gap: 8px; }
-        .search-box input { flex: 1; padding: 8px 12px; border: 1px solid #dbdbdb; border-radius: 6px; outline: none; }
+        .search-box input { flex: 1; padding: 10px 12px; border: 1px solid #dbdbdb; border-radius: 6px; outline: none; font-size: 14px; }
         
-        .user-list-item { display: flex; align-items: center; background: #fff; border: 1px solid #dbdbdb; padding: 10px 15px; border-radius: 8px; margin-bottom: 10px; cursor: pointer; position: relative; }
+        .user-list-item { display: flex; align-items: center; background: #fff; border: 1px solid #dbdbdb; padding: 12px 15px; border-radius: 8px; margin-bottom: 10px; cursor: pointer; position: relative; }
         .user-list-item img { width: 40px; height: 40px; border-radius: 50%; margin-right: 12px; object-fit: cover; }
-        
         .user-unread-dot { width: 8px; height: 8px; background-color: #ed4956; border-radius: 50%; margin-right: 10px; flex-shrink: 0; }
         
-        .chat-box { background: #fff; border: 1px solid #dbdbdb; border-radius: 8px; height: 400px; display: flex; flex-direction: column; }
+        .chat-box { background: #fff; border: 1px solid #dbdbdb; border-radius: 8px; height: 65vh; display: flex; flex-direction: column; }
         .chat-messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
-        .message-bubble { max-width: 70%; padding: 10px; border-radius: 12px; font-size: 14px; word-break: break-all; }
+        .message-bubble { max-width: 75%; padding: 10px 14px; border-radius: 12px; font-size: 14px; word-break: break-all; }
         .message-me { background: #0095f6; color: white; align-self: flex-end; }
         .message-other { background: #efefef; color: #262626; align-self: flex-start; }
         
-        .chat-input-area { display: flex; padding: 10px; border-top: 1px solid #dbdbdb; gap: 8px; }
-        .chat-input-area input { flex: 1; padding: 8px; border: 1px solid #dbdbdb; border-radius: 4px; outline: none; }
+        .chat-input-area { display: flex; padding: 10px; border-top: 1px solid #dbdbdb; gap: 8px; background: #fff; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; }
+        .chat-input-area input { flex: 1; padding: 10px; border: 1px solid #dbdbdb; border-radius: 4px; outline: none; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -71,7 +72,7 @@
 
             <div id="homeView">
                 <div style="background: #fff; border: 1px solid #dbdbdb; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
-                    <textarea id="postInput" style="width:100%; height:60px; border:none; outline:none; resize:none;" placeholder="今天想分享什麼..."></textarea>
+                    <textarea id="postInput" style="width:100%; height:60px; border:none; outline:none; resize:none; font-size: 14px;" placeholder="今天想分享什麼..."></textarea>
                     <div style="display: flex; justify-content: flex-end; border-top: 1px solid #efefef; padding-top: 8px;">
                         <button id="postBtn" class="btn">發佈</button>
                     </div>
@@ -82,7 +83,7 @@
             <div id="chatView" style="display:none;">
                 <div id="chatUserList">
                     <div class="search-box">
-                        <input type="text" id="searchInput" placeholder="輸入想搜尋的帳號代碼 (@username)...">
+                        <input type="text" id="searchInput" placeholder="輸入帳號代碼 (@username)...">
                         <button id="searchBtn" class="btn">搜尋</button>
                     </div>
                     <h3>所有註冊使用者</h3>
@@ -90,12 +91,15 @@
                 </div>
                 
                 <div id="activeChatRoom" style="display:none;">
-                    <button id="backToList" class="btn" style="margin-bottom: 10px; background: #dbdbdb; color: #262626;">⬅ 返回列表</button>
-                    <h3 id="chatWithTitle" style="margin-bottom: 10px;"></h3>
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                        <button id="backToList" class="btn" style="background: #dbdbdb; color: #262626;">⬅ 返回</button>
+                        <button id="deleteChatBtn" class="btn btn-danger">刪除對話</button>
+                    </div>
+                    <h3 id="chatWithTitle" style="margin-bottom: 10px; font-size: 16px;"></h3>
                     <div class="chat-box">
                         <div id="chatMessages" class="chat-messages"></div>
                         <div class="chat-input-area">
-                            <input type="text" id="chatInput" placeholder="傳送訊息...">
+                            <input type="text" id="chatInput" placeholder="傳送訊息 (按 Enter 傳送)...">
                             <button id="sendChatBtn" class="btn">傳送</button>
                         </div>
                     </div>
@@ -106,8 +110,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, updateDoc, doc, setDoc, getDoc, deleteDoc, arrayUnion, getDocs } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, browserLocalPersistence, setPersistence } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, updateDoc, doc, setDoc, getDoc, deleteDoc, arrayUnion, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDnF-e8BYtHKkqMGKLPL6-tCzh9SZHwGIE",
@@ -120,36 +124,33 @@
         
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
+
+        // 防止手機版自動登出
+        setPersistence(auth, browserLocalPersistence).catch((error) => {
+            console.error("登入持久性設定失敗:", error);
+        });
+
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
         const defaultImg = "https://www.gravatar.com/avatar/?d=mp";
 
         let currentUserProfile = null;
         let allUsersCache = [];
-        const unreadStatus = {}; // 記錄哪些用戶有未讀訊息
+        const unreadStatus = {};
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 const userDocRef = doc(db, "users", user.uid);
                 const userDocSnap = await getDoc(userDocRef);
-
                 let nameVal = user.displayName || "使用者";
                 let usernameVal = user.email ? user.email.split('@')[0] : "user_" + user.uid.substring(0, 5);
                 let photoVal = user.photoURL || defaultImg;
-
                 if (userDocSnap.exists()) {
                     const data = userDocSnap.data();
                     if (data.username && data.username !== "undefined") usernameVal = data.username;
                     if (data.photo) photoVal = data.photo;
                 }
-
-                currentUserProfile = {
-                    uid: user.uid,
-                    name: nameVal,
-                    username: usernameVal,
-                    photo: photoVal
-                };
-                
+                currentUserProfile = { uid: user.uid, name: nameVal, username: usernameVal, photo: photoVal };
                 await setDoc(userDocRef, currentUserProfile, { merge: true });
 
                 document.getElementById("myAvatar").src = currentUserProfile.photo;
@@ -166,14 +167,7 @@
             }
         });
 
-        document.getElementById("loginBtn").onclick = async () => {
-            try {
-                await signInWithPopup(auth, provider);
-            } catch (error) {
-                alert("錯誤代碼: " + error.code + "\n錯誤訊息: " + error.message);
-            }
-        };
-
+        document.getElementById("loginBtn").onclick = () => signInWithPopup(auth, provider);
         document.getElementById("logoutBtn").onclick = () => signOut(auth);
 
         const homeView = document.getElementById("homeView");
@@ -238,7 +232,7 @@
                         <strong>${postName}</strong> <span style="color:#8e8e8e; font-size:13px;">@${postUsername}</span>
                         <p style="margin: 10px 0;">${data.content}</p>
                         <div style="display:flex; align-items:center; gap:5px; margin-bottom:5px;">
-                            <button id="like-${docSnap.id}" class="btn" style="background:none; border:none; font-size:20px; cursor:pointer;" class="${isLiked ? 'liked' : ''}">❤️</button>
+                            <button id="like-${docSnap.id}" style="background:none; border:none; font-size:20px; cursor:pointer;" class="${isLiked ? 'liked' : ''}">❤️</button>
                             <span>${likedBy.length} 個讚</span>
                         </div>
                         <div style="display:flex; align-items:center; flex-wrap:wrap; font-size:12px; color:#666;">${avatarHtml} 覺得很讚</div>
@@ -263,7 +257,6 @@
         async function loadUserList() {
             const querySnapshot = await getDocs(collection(db, "users"));
             allUsersCache = [];
-            
             querySnapshot.forEach(docSnap => {
                 const uData = docSnap.data();
                 if (uData.uid && uData.uid !== auth.currentUser.uid) {
@@ -275,22 +268,16 @@
                     };
                     allUsersCache.push(targetUser);
 
-                    // 監聽對話紀錄來判斷是否有未讀
                     const chatId = [auth.currentUser.uid, targetUser.uid].sort().join("_");
                     let isFirstSnapshot = true;
-
                     onSnapshot(query(collection(db, "chats", chatId, "messages"), orderBy("timestamp", "desc")), (snapshot) => {
                         if (!snapshot.empty) {
                             const latestMsg = snapshot.docs[0].data();
-                            
-                            // 排除剛載入時的第一次快照（避免歷史訊息直接被當成未讀紅點）
-                            if (!isFirstSnapshot) {
-                                if (latestMsg.sender !== auth.currentUser.uid) {
-                                    unreadStatus[targetUser.uid] = true;
-                                    document.getElementById("unreadBadge").style.display = "block";
-                                    const dot = document.getElementById(`dot-${targetUser.uid}`);
-                                    if (dot) dot.style.display = "block";
-                                }
+                            if (!isFirstSnapshot && latestMsg.sender !== auth.currentUser.uid) {
+                                unreadStatus[targetUser.uid] = true;
+                                document.getElementById("unreadBadge").style.display = "block";
+                                const dot = document.getElementById(`dot-${targetUser.uid}`);
+                                if (dot) dot.style.display = "block";
                             }
                         }
                         isFirstSnapshot = false;
@@ -303,31 +290,26 @@
         function renderUserList(users) {
             const targetUsersDiv = document.getElementById("targetUsers");
             targetUsersDiv.innerHTML = "";
-
             if (users.length === 0) {
                 targetUsersDiv.innerHTML = `<p style="color:#888;">目前沒有其他使用者。</p>`;
                 return;
             }
-            
             users.forEach(uData => {
-                const displayName = uData.name;
-                const displayUsername = uData.username;
                 const hasUnread = unreadStatus[uData.uid] || false;
-
                 const userItem = document.createElement("div");
                 userItem.className = "user-list-item";
                 userItem.innerHTML = `
                     <div class="user-unread-dot" id="dot-${uData.uid}" style="display: ${hasUnread ? 'block' : 'none'};"></div>
                     <img src="${uData.photo}">
                     <div>
-                        <strong>${displayName}</strong>
-                        <div style="color:#8e8e8e; font-size:12px;">@${displayUsername}</div>
+                        <strong>${uData.name}</strong>
+                        <div style="color:#8e8e8e; font-size:12px;">@${uData.username}</div>
                     </div>
                 `;
                 userItem.onclick = () => {
-                    unreadStatus[uData.uid] = false; // 點擊後清除紅點
+                    unreadStatus[uData.uid] = false;
                     document.getElementById(`dot-${uData.uid}`).style.display = "none";
-                    openChatRoom(uData.uid, displayName, displayUsername);
+                    openChatRoom(uData.uid, uData.name, uData.username);
                 };
                 targetUsersDiv.appendChild(userItem);
             });
@@ -364,17 +346,24 @@
                 msgContainer.scrollTop = msgContainer.scrollHeight;
             });
 
-            document.getElementById("sendChatBtn").onclick = async () => {
-                const input = document.getElementById("chatInput");
-                const text = input.value;
-                if (!text.trim()) return;
+            const chatInput = document.getElementById("chatInput");
+            chatInput.onkeypress = (e) => { 
+                if(e.key === 'Enter') document.getElementById("sendChatBtn").click(); 
+            };
 
-                await addDoc(messagesRef, {
-                    content: text,
-                    sender: auth.currentUser.uid,
-                    timestamp: new Date()
-                });
-                input.value = "";
+            document.getElementById("sendChatBtn").onclick = async () => {
+                const text = chatInput.value;
+                if (!text.trim()) return;
+                await addDoc(messagesRef, { content: text, sender: auth.currentUser.uid, timestamp: new Date() });
+                chatInput.value = "";
+            };
+
+            document.getElementById("deleteChatBtn").onclick = async () => {
+                if(!confirm("確定要刪除所有對話紀錄嗎？")) return;
+                const snap = await getDocs(messagesRef);
+                const batch = writeBatch(db);
+                snap.forEach(doc => batch.delete(doc.ref));
+                await batch.commit();
             };
         }
 
