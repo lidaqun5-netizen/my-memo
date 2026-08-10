@@ -195,16 +195,16 @@
         const userProfileBanner = document.getElementById("userProfileBanner");
         const unreadBadge = document.getElementById("unreadBadge");
 
-        // 點擊左上角「看社交」返回主頁
+        // 點擊左上角「看社交」返回主頁，並滾動到最上方
         navBrand.onclick = () => {
             homeView.style.display = "block";
             chatView.style.display = "none";
             userProfileBanner.style.display = "flex";
             navHome.classList.add("active");
             navChat.classList.remove("active");
-            // 同時把聊天室內部狀態也重置回列表
             document.getElementById("activeChatRoom").style.display = "none";
             document.getElementById("chatUserList").style.display = "block";
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         };
 
         navHome.onclick = () => {
@@ -213,6 +213,7 @@
             userProfileBanner.style.display = "flex";
             navHome.classList.add("active");
             navChat.classList.remove("active");
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         };
 
         navChat.onclick = () => {
