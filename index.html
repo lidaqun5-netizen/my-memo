@@ -34,21 +34,26 @@
         
         .menu-container { position: relative; }
         .menu-btn { background: none; border: none; font-size: 18px; cursor: pointer; padding: 5px 10px; color: #8e8e8e; }
-        .dropdown-menu { display: none; position: absolute; right: 0; top: 30px; background: #fff; border: 1px solid #dbdbdb; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 10; width: 100px; }
+        .dropdown-menu { display: none; position: absolute; right: 0; top: 30px; background: #fff; border: 1px solid #dbdbdb; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 10; width: 110px; }
         .dropdown-item { padding: 8px 12px; font-size: 13px; cursor: pointer; text-align: left; background: none; border: none; width: 100%; }
         .dropdown-item:hover { background: #f0f0f0; }
         .dropdown-item.danger { color: #ed4956; }
 
         .chat-box { background: #fff; border: 1px solid #dbdbdb; border-radius: 8px; height: 60vh; display: flex; flex-direction: column; }
         .chat-messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
-        .message-container { display: flex; flex-direction: column; max-width: 75%; }
+        .message-container { display: flex; flex-direction: column; max-width: 75%; position: relative; }
         .message-me { align-self: flex-end; align-items: flex-end; }
         .message-other { align-self: flex-start; align-items: flex-start; }
         
-        .message-bubble { padding: 10px 14px; border-radius: 12px; font-size: 14px; word-break: break-all; cursor: pointer; }
+        .message-bubble { padding: 10px 14px; border-radius: 12px; font-size: 14px; word-break: break-all; cursor: pointer; position: relative; }
         .message-me .message-bubble { background: #0095f6; color: white; }
         .message-other .message-bubble { background: #efefef; color: #262626; }
         
+        .message-action-menu { display: none; position: absolute; bottom: -30px; background: #fff; border: 1px solid #dbdbdb; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); z-index: 5; white-space: nowrap; }
+        .message-action-btn { background: none; border: none; padding: 6px 10px; font-size: 12px; cursor: pointer; }
+        .message-action-btn:hover { background: #f0f0f0; }
+        .message-action-btn.danger { color: #ed4956; }
+
         .reply-quote { font-size: 12px; opacity: 0.8; border-left: 2px solid rgba(255,255,255,0.7); padding-left: 6px; margin-bottom: 4px; }
         .message-other .reply-quote { border-left-color: #0095f6; }
 
@@ -58,6 +63,8 @@
         .chat-input-area input { flex: 1; padding: 10px; border: 1px solid #dbdbdb; border-radius: 4px; outline: none; font-size: 14px; }
         
         .request-banner { background: #fff8db; border: 1px solid #ffeeba; padding: 10px 15px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #dbdbdb; }
+        
+        .post-reply-btn { background: none; border: none; color: #0095f6; cursor: pointer; font-size: 13px; font-weight: bold; padding: 0; margin-left: 10px; }
     </style>
 </head>
 <body>
@@ -141,7 +148,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, browserLocalPersistence, setPersistence } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, updateDoc, doc, setDoc, getDoc, deleteDoc, arrayUnion, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, updateDoc, doc, setDoc, getDoc, deleteDoc, arrayUnion, arrayRemove, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDnF-e8BYtHKkqMGKLPL6-tCzh9SZHwGIE",
@@ -163,10 +170,12 @@
         let currentUserProfile = null;
         let allUsersCache = [];
         let pinnedUsers = JSON.parse(localStorage.getItem('pinned_users') || '[]');
+        let hiddenUsers = JSON.parse(localStorage.getItem('hidden_users_' + (auth.currentUser?.uid || '')) || '[]');
         let replyingTo = null;
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
+                hiddenUsers = JSON.parse(localStorage.getItem('hidden_users_' + user.uid) || '[]');
                 const userDocRef = doc(db, "users", user.uid);
                 const userDocSnap = await getDoc(userDocRef);
                 let nameVal = user.displayName || "使用者";
@@ -261,23 +270,72 @@
                     const postName = (data.name && data.name !== "看社交" && data.name !== "undefined") ? data.name : "使用者";
                     const postUsername = (data.username && data.username !== "undefined") ? data.username : "user";
 
-                    const avatarHtml = likedBy.map(user => {
-                        const imgSrc = user.photo ? user.photo : defaultImg;
-                        return `<img src="${imgSrc}" style="width:24px; height:24px; border-radius:50%; margin-right:4px; object-fit:cover;">`;
-                    }).join('');
-
                     const div = document.createElement("div");
                     div.className = "post";
-                    div.innerHTML = `
-                        <strong>${postName}</strong> <span style="color:#8e8e8e; font-size:13px;">@${postUsername}</span>
-                        <p style="margin: 10px 0;">${data.content}</p>
-                        <div style="display:flex; align-items:center; gap:5px; margin-bottom:5px;">
-                            <button id="like-${docSnap.id}" style="background:none; border:none; font-size:20px; cursor:pointer;" class="${isLiked ? 'liked' : ''}">❤️</button>
-                            <span>${likedBy.length} 個讚</span>
-                        </div>
-                        <div style="display:flex; align-items:center; flex-wrap:wrap; font-size:12px; color:#666;">${avatarHtml} 覺得很讚</div>
-                        ${isOwner ? `<button id="del-${docSnap.id}" style="background:none; border:none; color:#ed4956; cursor:pointer; margin-top:10px;">刪除貼文</button>` : ''}
-                    `;
+
+                    // 安全防護：使用 DOM 節點與 textContent 替代 innerHTML 渲染使用者內容，防止 XSS
+                    const headerEl = document.createElement("div");
+                    const strongName = document.createElement("strong");
+                    strongName.textContent = postName;
+                    const spanUser = document.createElement("span");
+                    spanUser.style.cssText = "color:#8e8e8e; font-size:13px;";
+                    spanUser.textContent = ` @${postUsername}`;
+                    headerEl.appendChild(strongName);
+                    headerEl.appendChild(spanUser);
+
+                    const contentP = document.createElement("p");
+                    contentP.style.cssText = "margin: 10px 0; white-space: pre-wrap;";
+                    contentP.textContent = data.content;
+
+                    const actionDiv = document.createElement("div");
+                    actionDiv.style.cssText = "display:flex; align-items:center; gap:5px; margin-bottom:5px;";
+
+                    const likeBtn = document.createElement("button");
+                    likeBtn.id = `like-${docSnap.id}`;
+                    likeBtn.style.cssText = "background:none; border:none; font-size:20px; cursor:pointer;";
+                    likeBtn.className = isLiked ? 'liked' : '';
+                    likeBtn.textContent = "❤️";
+
+                    const likeCountSpan = document.createElement("span");
+                    likeCountSpan.style.fontSize = "14px";
+                    likeCountSpan.textContent = `${likedBy.length} 個讚`;
+
+                    const replyPostBtn = document.createElement("button");
+                    replyPostBtn.className = "post-reply-btn";
+                    replyPostBtn.id = `reply-post-${docSnap.id}`;
+                    replyPostBtn.textContent = "💬 回覆貼文";
+
+                    actionDiv.appendChild(likeBtn);
+                    actionDiv.appendChild(likeCountSpan);
+                    actionDiv.appendChild(replyPostBtn);
+
+                    const avatarsDiv = document.createElement("div");
+                    avatarsDiv.style.cssText = "display:flex; align-items:center; flex-wrap:wrap; font-size:12px; color:#666;";
+                    
+                    likedBy.forEach(user => {
+                        const img = document.createElement("img");
+                        img.src = user.photo ? user.photo : defaultImg;
+                        img.style.cssText = "width:24px; height:24px; border-radius:50%; margin-right:4px; object-fit:cover;";
+                        avatarsDiv.appendChild(img);
+                    });
+                    const likeTextNode = document.createElement("span");
+                    likeTextNode.textContent = " 覺得很讚";
+                    avatarsDiv.appendChild(likeTextNode);
+
+                    div.appendChild(headerEl);
+                    div.appendChild(contentP);
+                    div.appendChild(actionDiv);
+                    div.appendChild(avatarsDiv);
+
+                    if (isOwner) {
+                        const delBtn = document.createElement("button");
+                        delBtn.id = `del-${docSnap.id}`;
+                        delBtn.style.cssText = "background:none; border:none; color:#ed4956; cursor:pointer; margin-top:10px; font-size:12px; display:block;";
+                        delBtn.textContent = "刪除貼文";
+                        div.appendChild(delBtn);
+                        delBtn.onclick = () => deleteDoc(doc(db, 'memos', docSnap.id));
+                    }
+
                     list.appendChild(div);
 
                     document.getElementById(`like-${docSnap.id}`).onclick = async () => {
@@ -287,9 +345,12 @@
                         });
                     };
 
-                    if (isOwner) {
-                        document.getElementById(`del-${docSnap.id}`).onclick = () => deleteDoc(doc(db, 'memos', docSnap.id));
-                    }
+                    document.getElementById(`reply-post-${docSnap.id}`).onclick = () => {
+                        const postInput = document.getElementById("postInput");
+                        postInput.value = `Re @${postUsername}: "${data.content.substring(0, 20)}..."\n`;
+                        postInput.focus();
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    };
                 });
             });
         }
@@ -299,7 +360,7 @@
             allUsersCache = [];
             querySnapshot.forEach(docSnap => {
                 const uData = docSnap.data();
-                if (uData.uid && uData.uid !== auth.currentUser.uid) {
+                if (uData.uid && uData.uid !== auth.currentUser.uid && !hiddenUsers.includes(uData.uid)) {
                     const targetUser = {
                         uid: uData.uid,
                         name: (uData.name && uData.name !== "看社交" && uData.name !== "undefined") ? uData.name : "使用者",
@@ -349,39 +410,90 @@
 
                 const userItem = document.createElement("div");
                 userItem.className = "user-list-item";
-                userItem.innerHTML = `
-                    <div class="user-info-area">
-                        <div class="user-unread-dot" id="dot-${uData.uid}" style="display: ${hasUnread ? 'block' : 'none'};"></div>
-                        <img src="${uData.photo}">
-                        <div>
-                            <strong>${uData.name}</strong> ${isPinned ? '<span style="color:#0095f6; font-size:12px;">📌 置頂</span>' : ''}
-                            <div style="color:#8e8e8e; font-size:12px;">@${uData.username}</div>
-                        </div>
-                    </div>
-                    <div class="menu-container">
-                        <button class="menu-btn" id="menu-btn-${uData.uid}">⋮</button>
-                        <div class="dropdown-menu" id="dropdown-${uData.uid}">
-                            <button class="dropdown-item" id="pin-${uData.uid}">${isPinned ? '取消置頂' : '置頂對話'}</button>
-                            <button class="dropdown-item danger" id="del-chat-${uData.uid}">刪除對話</button>
-                        </div>
-                    </div>
-                `;
 
-                userItem.querySelector(".user-info-area").onclick = () => {
+                // 使用安全節點建立使用者列表
+                const infoArea = document.createElement("div");
+                infoArea.className = "user-info-area";
+
+                const dot = document.createElement("div");
+                dot.className = "user-unread-dot";
+                dot.id = `dot-${uData.uid}`;
+                dot.style.display = hasUnread ? 'block' : 'none';
+
+                const avatarImg = document.createElement("img");
+                avatarImg.src = uData.photo;
+
+                const textDiv = document.createElement("div");
+                const nameStrong = document.createElement("strong");
+                nameStrong.textContent = uData.name;
+                textDiv.appendChild(nameStrong);
+
+                if (isPinned) {
+                    const pinSpan = document.createElement("span");
+                    pinSpan.style.cssText = "color:#0095f6; font-size:12px; margin-left:4px;";
+                    pinSpan.textContent = "📌 置頂";
+                    textDiv.appendChild(pinSpan);
+                }
+
+                const usernameDiv = document.createElement("div");
+                usernameDiv.style.cssText = "color:#8e8e8e; font-size:12px;";
+                usernameDiv.textContent = `@${uData.username}`;
+                textDiv.appendChild(usernameDiv);
+
+                infoArea.appendChild(dot);
+                infoArea.appendChild(avatarImg);
+                infoArea.appendChild(textDiv);
+
+                const menuContainer = document.createElement("div");
+                menuContainer.className = "menu-container";
+
+                const menuBtn = document.createElement("button");
+                menuBtn.className = "menu-btn";
+                menuBtn.id = `menu-btn-${uData.uid}`;
+                menuBtn.textContent = "⋮";
+
+                const dropdown = document.createElement("div");
+                dropdown.className = "dropdown-menu";
+                dropdown.id = `dropdown-${uData.uid}`;
+
+                const pinItem = document.createElement("button");
+                pinItem.className = "dropdown-item";
+                pinItem.id = `pin-${uData.uid}`;
+                pinItem.textContent = isPinned ? '取消置頂' : '置頂對話';
+
+                const delChat = document.createElement("button");
+                delChat.className = "dropdown-item danger";
+                delChat.id = `del-chat-${uData.uid}`;
+                delChat.textContent = "刪除對話";
+
+                const delFriend = document.createElement("button");
+                delFriend.className = "dropdown-item danger";
+                delFriend.id = `del-friend-${uData.uid}`;
+                delFriend.textContent = "刪除朋友";
+
+                dropdown.appendChild(pinItem);
+                dropdown.appendChild(delChat);
+                dropdown.appendChild(delFriend);
+
+                menuContainer.appendChild(menuBtn);
+                menuContainer.appendChild(dropdown);
+
+                userItem.appendChild(infoArea);
+                userItem.appendChild(menuContainer);
+
+                infoArea.onclick = () => {
                     unreadStatus[uData.uid] = false;
                     document.getElementById(`dot-${uData.uid}`).style.display = "none";
                     openChatRoom(uData.uid, uData.name, uData.username);
                 };
 
-                const menuBtn = userItem.querySelector(`#menu-btn-${uData.uid}`);
-                const dropdown = userItem.querySelector(`#dropdown-${uData.uid}`);
                 menuBtn.onclick = (e) => {
                     e.stopPropagation();
                     document.querySelectorAll('.dropdown-menu').forEach(m => { if(m !== dropdown) m.style.display = 'none'; });
                     dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
                 };
 
-                userItem.querySelector(`#pin-${uData.uid}`).onclick = (e) => {
+                pinItem.onclick = (e) => {
                     e.stopPropagation();
                     dropdown.style.display = 'none';
                     if (isPinned) {
@@ -393,7 +505,7 @@
                     renderUserList(allUsersCache);
                 };
 
-                userItem.querySelector(`#del-chat-${uData.uid}`).onclick = async (e) => {
+                delChat.onclick = async (e) => {
                     e.stopPropagation();
                     dropdown.style.display = 'none';
                     if(!confirm(`確定要刪除與 ${uData.name} 的所有對話嗎？`)) return;
@@ -406,12 +518,35 @@
                     alert("對話已刪除");
                 };
 
+                delFriend.onclick = async (e) => {
+                    e.stopPropagation();
+                    dropdown.style.display = 'none';
+                    if(!confirm(`確定要將 ${uData.name} 從朋友清單刪除嗎？`)) return;
+                    
+                    const chatId = [auth.currentUser.uid, uData.uid].sort().join("_");
+                    await deleteDoc(doc(db, "chats_meta", chatId));
+                    const snap = await getDocs(collection(db, "chats", chatId, "messages"));
+                    const batch = writeBatch(db);
+                    snap.forEach(doc => batch.delete(doc.ref));
+                    await batch.commit();
+
+                    if (!hiddenUsers.includes(uData.uid)) {
+                        hiddenUsers.push(uData.uid);
+                        localStorage.setItem('hidden_users_' + auth.currentUser.uid, JSON.stringify(hiddenUsers));
+                    }
+
+                    allUsersCache = allUsersCache.filter(u => u.uid !== uData.uid);
+                    renderUserList(allUsersCache);
+                    alert("已刪除該朋友");
+                };
+
                 targetUsersDiv.appendChild(userItem);
             });
         }
 
         window.onclick = () => {
             document.querySelectorAll('.dropdown-menu').forEach(m => m.style.display = 'none');
+            document.querySelectorAll('.message-action-menu').forEach(m => m.style.display = 'none');
         };
 
         document.getElementById("searchBtn").onclick = () => {
@@ -433,7 +568,6 @@
             const metaRef = doc(db, "chats_meta", chatId);
             const messagesRef = collection(db, "chats", chatId, "messages");
 
-            // 檢查聊天室狀態 (Request 狀態)
             let metaSnap = await getDoc(metaRef);
             let chatMeta = metaSnap.exists() ? metaSnap.data() : { status: "none", requestedBy: null };
 
@@ -443,14 +577,12 @@
             function updateUIState() {
                 if (chatMeta.status === "pending") {
                     if (chatMeta.requestedBy === auth.currentUser.uid) {
-                        // 我發送的請求，對方尚未接受
                         requestActionBar.style.display = "flex";
                         document.getElementById("requestText").innerText = "已傳送訊息請求，等待對方接受中...";
                         document.getElementById("acceptRequestBtn").style.display = "none";
                         document.getElementById("rejectRequestBtn").style.display = "none";
-                        chatInputArea.style.display = "none"; // 暫時不能傳送新訊息，等對方接受
+                        chatInputArea.style.display = "none";
                     } else {
-                        // 對方發送給我的請求
                         requestActionBar.style.display = "flex";
                         document.getElementById("requestText").innerText = "對方傳送了訊息請求，接受後即可對話";
                         document.getElementById("acceptRequestBtn").style.display = "inline-block";
@@ -458,7 +590,6 @@
                         chatInputArea.style.display = "none";
                     }
                 } else {
-                    // 已接受或正常對話
                     requestActionBar.style.display = "none";
                     chatInputArea.style.display = "flex";
                 }
@@ -466,14 +597,12 @@
 
             updateUIState();
 
-            // 接受請求按鈕
             document.getElementById("acceptRequestBtn").onclick = async () => {
                 await setDoc(metaRef, { status: "accepted", requestedBy: null }, { merge: true });
                 chatMeta.status = "accepted";
                 updateUIState();
             };
 
-            // 拒絕/刪除請求
             document.getElementById("rejectRequestBtn").onclick = async () => {
                 await deleteDoc(metaRef);
                 const snap = await getDocs(messagesRef);
@@ -488,31 +617,72 @@
                 msgContainer.innerHTML = "";
                 snapshot.forEach(docSnap => {
                     const msg = docSnap.data();
+                    const msgId = docSnap.id;
                     const isMe = msg.sender === auth.currentUser.uid;
                     
                     const msgWrapper = document.createElement("div");
                     msgWrapper.className = `message-container ${isMe ? 'message-me' : 'message-other'}`;
 
-                    let replyHtml = '';
+                    const bubble = document.createElement("div");
+                    bubble.className = "message-bubble";
+                    bubble.id = `msg-bubble-${msgId}`;
+
+                    // 使用 textContent 避免聊天訊息內文受到 XSS 攻擊
                     if (msg.replyTo) {
-                        replyHtml = `<div class="reply-quote">回覆：${msg.replyTo}</div>`;
+                        const replyQuote = document.createElement("div");
+                        replyQuote.className = "reply-quote";
+                        replyQuote.textContent = `回覆：${msg.replyTo}`;
+                        bubble.appendChild(replyQuote);
                     }
 
-                    msgWrapper.innerHTML = `
-                        <div class="message-bubble">
-                            ${replyHtml}
-                            <div>${msg.content}</div>
-                        </div>
-                    `;
+                    const contentDiv = document.createElement("div");
+                    contentDiv.textContent = msg.content;
+                    bubble.appendChild(contentDiv);
 
-                    msgWrapper.querySelector(".message-bubble").onclick = () => {
+                    const menu = document.createElement("div");
+                    menu.className = "message-action-menu";
+                    menu.id = `msg-menu-${msgId}`;
+
+                    const replyBtn = document.createElement("button");
+                    replyBtn.className = "message-action-btn";
+                    replyBtn.id = `reply-btn-${msgId}`;
+                    replyBtn.textContent = "回覆";
+                    menu.appendChild(replyBtn);
+
+                    if (isMe) {
+                        const recallBtn = document.createElement("button");
+                        recallBtn.className = "message-action-btn danger";
+                        recallBtn.id = `recall-btn-${msgId}`;
+                        recallBtn.textContent = "收回訊息";
+                        menu.appendChild(recallBtn);
+                    }
+
+                    msgWrapper.appendChild(bubble);
+                    msgWrapper.appendChild(menu);
+                    msgContainer.appendChild(msgWrapper);
+
+                    bubble.onclick = (e) => {
+                        e.stopPropagation();
+                        document.querySelectorAll('.message-action-menu').forEach(m => { if (m !== menu) m.style.display = 'none'; });
+                        menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+                    };
+
+                    replyBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        menu.style.display = 'none';
                         replyingTo = msg.content;
                         document.getElementById("replyPreviewText").innerText = `回覆：${msg.content}`;
                         document.getElementById("replyPreviewBar").style.display = "flex";
                         document.getElementById("chatInput").focus();
                     };
 
-                    msgContainer.appendChild(msgWrapper);
+                    if (isMe) {
+                        document.getElementById(`recall-btn-${msgId}`).onclick = async (e) => {
+                            e.stopPropagation();
+                            menu.style.display = 'none';
+                            await deleteDoc(doc(db, "chats", chatId, "messages", msgId));
+                        };
+                    }
                 });
                 msgContainer.scrollTop = msgContainer.scrollHeight;
             });
@@ -531,7 +701,6 @@
                 const text = chatInput.value;
                 if (!text.trim()) return;
 
-                // 如果是全新對話，發送第一則訊息時設定為 pending 狀態
                 if (!metaSnap.exists() || chatMeta.status === "none") {
                     await setDoc(metaRef, { status: "pending", requestedBy: auth.currentUser.uid });
                     chatMeta = { status: "pending", requestedBy: auth.currentUser.uid };
