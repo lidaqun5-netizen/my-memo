@@ -56,6 +56,8 @@
 
         .chat-input-area { display: flex; padding: 10px; border-top: 1px solid #dbdbdb; gap: 8px; background: #fff; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; }
         .chat-input-area input { flex: 1; padding: 10px; border: 1px solid #dbdbdb; border-radius: 4px; outline: none; font-size: 14px; }
+        
+        .request-banner { background: #fff8db; border: 1px solid #ffeeba; padding: 10px 15px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #dbdbdb; }
     </style>
 </head>
 <body>
@@ -118,7 +120,15 @@
                             <button id="cancelReplyBtn" style="background:none; border:none; color:#ed4956; cursor:pointer; font-weight:bold;">✕</button>
                         </div>
 
-                        <div class="chat-input-area">
+                        <div id="requestActionBar" class="request-banner" style="display:none;">
+                            <span id="requestText">對方傳送了訊息請求，接受後即可自由對話</span>
+                            <div style="display:flex; gap: 6px;">
+                                <button id="acceptRequestBtn" class="btn" style="padding: 4px 10px; font-size: 12px;">接受</button>
+                                <button id="rejectRequestBtn" class="btn btn-danger" style="padding: 4px 10px; font-size: 12px;">刪除請求</button>
+                            </div>
+                        </div>
+
+                        <div class="chat-input-area" id="chatInputArea">
                             <input type="text" id="chatInput" placeholder="傳送訊息 (按 Enter 傳送)...">
                             <button id="sendChatBtn" class="btn">傳送</button>
                         </div>
@@ -195,7 +205,6 @@
         const userProfileBanner = document.getElementById("userProfileBanner");
         const unreadBadge = document.getElementById("unreadBadge");
 
-        // 點擊左上角「看社交」返回主頁，並滾動到最上方
         navBrand.onclick = () => {
             homeView.style.display = "block";
             chatView.style.display = "none";
@@ -389,6 +398,7 @@
                     dropdown.style.display = 'none';
                     if(!confirm(`確定要刪除與 ${uData.name} 的所有對話嗎？`)) return;
                     const chatId = [auth.currentUser.uid, uData.uid].sort().join("_");
+                    await deleteDoc(doc(db, "chats_meta", chatId));
                     const snap = await getDocs(collection(db, "chats", chatId, "messages"));
                     const batch = writeBatch(db);
                     snap.forEach(doc => batch.delete(doc.ref));
@@ -414,13 +424,64 @@
             renderUserList(filtered);
         };
 
-        function openChatRoom(targetUid, targetName, targetUsername) {
+        async function openChatRoom(targetUid, targetName, targetUsername) {
             document.getElementById("chatUserList").style.display = "none";
             document.getElementById("activeChatRoom").style.display = "block";
             document.getElementById("chatWithTitle").innerText = `與 ${targetName} (@${targetUsername}) 的聊天室`;
 
             const chatId = [auth.currentUser.uid, targetUid].sort().join("_");
+            const metaRef = doc(db, "chats_meta", chatId);
             const messagesRef = collection(db, "chats", chatId, "messages");
+
+            // 檢查聊天室狀態 (Request 狀態)
+            let metaSnap = await getDoc(metaRef);
+            let chatMeta = metaSnap.exists() ? metaSnap.data() : { status: "none", requestedBy: null };
+
+            const requestActionBar = document.getElementById("requestActionBar");
+            const chatInputArea = document.getElementById("chatInputArea");
+
+            function updateUIState() {
+                if (chatMeta.status === "pending") {
+                    if (chatMeta.requestedBy === auth.currentUser.uid) {
+                        // 我發送的請求，對方尚未接受
+                        requestActionBar.style.display = "flex";
+                        document.getElementById("requestText").innerText = "已傳送訊息請求，等待對方接受中...";
+                        document.getElementById("acceptRequestBtn").style.display = "none";
+                        document.getElementById("rejectRequestBtn").style.display = "none";
+                        chatInputArea.style.display = "none"; // 暫時不能傳送新訊息，等對方接受
+                    } else {
+                        // 對方發送給我的請求
+                        requestActionBar.style.display = "flex";
+                        document.getElementById("requestText").innerText = "對方傳送了訊息請求，接受後即可對話";
+                        document.getElementById("acceptRequestBtn").style.display = "inline-block";
+                        document.getElementById("rejectRequestBtn").style.display = "inline-block";
+                        chatInputArea.style.display = "none";
+                    }
+                } else {
+                    // 已接受或正常對話
+                    requestActionBar.style.display = "none";
+                    chatInputArea.style.display = "flex";
+                }
+            }
+
+            updateUIState();
+
+            // 接受請求按鈕
+            document.getElementById("acceptRequestBtn").onclick = async () => {
+                await setDoc(metaRef, { status: "accepted", requestedBy: null }, { merge: true });
+                chatMeta.status = "accepted";
+                updateUIState();
+            };
+
+            // 拒絕/刪除請求
+            document.getElementById("rejectRequestBtn").onclick = async () => {
+                await deleteDoc(metaRef);
+                const snap = await getDocs(messagesRef);
+                const batch = writeBatch(db);
+                snap.forEach(doc => batch.delete(doc.ref));
+                await batch.commit();
+                document.getElementById("backToList").click();
+            };
 
             onSnapshot(query(messagesRef, orderBy("timestamp", "asc")), (snapshot) => {
                 const msgContainer = document.getElementById("chatMessages");
@@ -470,6 +531,12 @@
                 const text = chatInput.value;
                 if (!text.trim()) return;
 
+                // 如果是全新對話，發送第一則訊息時設定為 pending 狀態
+                if (!metaSnap.exists() || chatMeta.status === "none") {
+                    await setDoc(metaRef, { status: "pending", requestedBy: auth.currentUser.uid });
+                    chatMeta = { status: "pending", requestedBy: auth.currentUser.uid };
+                }
+
                 const newMsg = {
                     content: text,
                     sender: auth.currentUser.uid,
@@ -483,6 +550,7 @@
                 chatInput.value = "";
                 replyingTo = null;
                 document.getElementById("replyPreviewBar").style.display = "none";
+                updateUIState();
             };
         }
 
