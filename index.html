@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>看社交</title>
-    <!-- 瀏覽器分頁圖示 (如果沒有 favicon.ico 可以先暫時用 logo.png) -->
+    <!-- 瀏覽器分頁圖示 -->
     <link rel="icon" href="logo.png" type="image/x-icon">
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 0; margin: 0; background: #fafafa; color: #262626; }
@@ -73,14 +73,14 @@
 </head>
 <body>
 
-    <!-- 登入頁面 -->
+    <!-- 登入頁面 (預設顯示) -->
     <div id="loginSection" class="login-box">
         <img src="logo.png" alt="看社交 Logo" class="login-logo">
         <h2>歡迎來到看社交</h2>
         <button id="loginBtn" class="btn">使用 Google 登入</button>
     </div>
 
-    <!-- 主要 App 介面 -->
+    <!-- 主要 App 介面 (預設隱藏，必須通過 Firebase 驗證才會開啟) -->
     <div id="appSection" style="display:none;">
         <div class="navbar">
             <div id="navBrand" class="nav-brand">
@@ -179,11 +179,13 @@
         let currentUserProfile = null;
         let allUsersCache = [];
         let pinnedUsers = JSON.parse(localStorage.getItem('pinned_users') || '[]');
-        let hiddenUsers = JSON.parse(localStorage.getItem('hidden_users_' + (auth.currentUser?.uid || '')) || '[]');
+        let hiddenUsers = [];
         let replyingTo = null;
 
+        // 嚴格交由 Firebase 監聽驗證狀態來控制畫面顯示
         onAuthStateChanged(auth, async (user) => {
             if (user) {
+                // 已登入：載入資料並解鎖主頁
                 hiddenUsers = JSON.parse(localStorage.getItem('hidden_users_' + user.uid) || '[]');
                 const userDocRef = doc(db, "users", user.uid);
                 const userDocSnap = await getDoc(userDocRef);
@@ -207,12 +209,20 @@
                 loadPosts();
                 loadUserList();
             } else {
+                // 未登入：強制停留在登入頁面，隱藏主頁
+                currentUserProfile = null;
                 document.getElementById("loginSection").style.display = "block";
                 document.getElementById("appSection").style.display = "none";
             }
         });
 
-        document.getElementById("loginBtn").onclick = () => signInWithPopup(auth, provider);
+        // 登入按鈕只負責發動 Google 彈跳視窗，不直接切換畫面
+        document.getElementById("loginBtn").onclick = () => {
+            signInWithPopup(auth, provider).catch((error) => {
+                console.error("登入失敗：", error);
+            });
+        };
+
         document.getElementById("logoutBtn").onclick = () => signOut(auth);
 
         const homeView = document.getElementById("homeView");
@@ -273,8 +283,8 @@
                 snapshot.forEach(docSnap => {
                     const data = docSnap.data();
                     const likedBy = data.likedBy || [];
-                    const isLiked = likedBy.some(user => user.uid === auth.currentUser.uid);
-                    const isOwner = auth.currentUser.uid === data.uid;
+                    const isLiked = auth.currentUser ? likedBy.some(user => user.uid === auth.currentUser.uid) : false;
+                    const isOwner = auth.currentUser ? auth.currentUser.uid === data.uid : false;
                     
                     const postName = (data.name && data.name !== "看社交" && data.name !== "undefined") ? data.name : "使用者";
                     const postUsername = (data.username && data.username !== "undefined") ? data.username : "user";
@@ -347,7 +357,7 @@
                     list.appendChild(div);
 
                     document.getElementById(`like-${docSnap.id}`).onclick = async () => {
-                        if (isLiked) return;
+                        if (!auth.currentUser || isLiked) return;
                         await updateDoc(doc(db, 'memos', docSnap.id), { 
                             likedBy: arrayUnion({ uid: auth.currentUser.uid, photo: currentUserProfile.photo })
                         });
@@ -364,6 +374,7 @@
         }
 
         async function loadUserList() {
+            if (!auth.currentUser) return;
             const querySnapshot = await getDocs(collection(db, "users"));
             allUsersCache = [];
             querySnapshot.forEach(docSnap => {
@@ -380,7 +391,7 @@
                     const chatId = [auth.currentUser.uid, targetUser.uid].sort().join("_");
                     let isFirstSnapshot = true;
                     onSnapshot(query(collection(db, "chats", chatId, "messages"), orderBy("timestamp", "desc")), (snapshot) => {
-                        if (!snapshot.empty) {
+                        if (!snapshot.empty && auth.currentUser) {
                             const latestMsg = snapshot.docs[0].data();
                             if (!isFirstSnapshot && latestMsg.sender !== auth.currentUser.uid) {
                                 unreadStatus[targetUser.uid] = true;
@@ -515,7 +526,7 @@
                 delChat.onclick = async (e) => {
                     e.stopPropagation();
                     dropdown.style.display = 'none';
-                    if(!confirm(`確定要刪除與 ${uData.name} 的所有對話嗎？`)) return;
+                    if(!confirm(`確定要刪除與 ${uData.name} 的所有對話嗎？`) || !auth.currentUser) return;
                     const chatId = [auth.currentUser.uid, uData.uid].sort().join("_");
                     await deleteDoc(doc(db, "chats_meta", chatId));
                     const snap = await getDocs(collection(db, "chats", chatId, "messages"));
@@ -528,7 +539,7 @@
                 delFriend.onclick = async (e) => {
                     e.stopPropagation();
                     dropdown.style.display = 'none';
-                    if(!confirm(`確定要將 ${uData.name} 從朋友清單刪除嗎？`)) return;
+                    if(!confirm(`確定要將 ${uData.name} 從朋友清單刪除嗎？`) || !auth.currentUser) return;
                     
                     const chatId = [auth.currentUser.uid, uData.uid].sort().join("_");
                     await deleteDoc(doc(db, "chats_meta", chatId));
@@ -567,6 +578,7 @@
         };
 
         async function openChatRoom(targetUid, targetName, targetUsername) {
+            if (!auth.currentUser) return;
             document.getElementById("chatUserList").style.display = "none";
             document.getElementById("activeChatRoom").style.display = "block";
             document.getElementById("chatWithTitle").innerText = `與 ${targetName} (@${targetUsername}) 的聊天室`;
@@ -582,6 +594,7 @@
             const chatInputArea = document.getElementById("chatInputArea");
 
             function updateUIState() {
+                if (!auth.currentUser) return;
                 if (chatMeta.status === "pending") {
                     if (chatMeta.requestedBy === auth.currentUser.uid) {
                         requestActionBar.style.display = "flex";
@@ -620,6 +633,7 @@
             };
 
             onSnapshot(query(messagesRef, orderBy("timestamp", "asc")), (snapshot) => {
+                if (!auth.currentUser) return;
                 const msgContainer = document.getElementById("chatMessages");
                 msgContainer.innerHTML = "";
                 snapshot.forEach(docSnap => {
@@ -704,6 +718,7 @@
             };
 
             document.getElementById("sendChatBtn").onclick = async () => {
+                if (!auth.currentUser) return;
                 const text = chatInput.value;
                 if (!text.trim()) return;
 
