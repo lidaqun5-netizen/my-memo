@@ -3,11 +3,14 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>我的社群 App</title>
+    <title>看社交</title>
+    <!-- 瀏覽器分頁圖示 -->
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 0; margin: 0; background: #fafafa; color: #262626; }
         .navbar { display: flex; justify-content: space-between; align-items: center; background: #fff; border-bottom: 1px solid #dbdbdb; padding: 0 15px; position: fixed; top: 0; width: 100%; height: 50px; z-index: 100; box-sizing: border-box; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .nav-brand { font-weight: bold; font-size: 18px; color: #262626; cursor: pointer; }
+        .nav-brand { font-weight: bold; font-size: 18px; color: #262626; cursor: pointer; display: flex; align-items: center; }
+        .nav-brand img { height: 32px; width: auto; object-fit: contain; }
         .nav-center { display: flex; gap: 30px; }
         .nav-btn { background: none; border: none; font-size: 16px; font-weight: bold; cursor: pointer; color: #8e8e8e; position: relative; }
         .nav-btn.active { color: #0095f6; }
@@ -16,7 +19,8 @@
         
         .container { width: 100%; max-width: 500px; margin: 65px auto 20px auto; padding: 10px; box-sizing: border-box; }
         .post { background: #fff; border: 1px solid #dbdbdb; border-radius: 8px; padding: 15px; margin-bottom: 20px; }
-        .login-box { text-align: center; margin-top: 100px; padding: 20px; }
+        .login-box { text-align: center; margin-top: 80px; padding: 20px; }
+        .login-logo { max-width: 140px; width: 100%; height: auto; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
         .btn { padding: 8px 16px; cursor: pointer; border-radius: 4px; border: none; background: #0095f6; color: white; font-weight: bold; font-size: 14px; }
         .btn-danger { background: #ed4956; }
         .liked { color: #ed4956 !important; }
@@ -70,13 +74,18 @@
 <body>
 
     <div id="loginSection" class="login-box">
-        <h2>歡迎來到我的社群 App</h2>
+        <!-- 登入頁面 Logo -->
+        <img src="logo.png" alt="看社交 Logo" class="login-logo">
+        <h2 style="margin-bottom: 20px;">歡迎來到看社交</h2>
         <button id="loginBtn" class="btn">使用 Google 登入</button>
     </div>
 
     <div id="appSection" style="display:none;">
         <div class="navbar">
-            <div id="navBrand" class="nav-brand">看社交</div>
+            <!-- 導覽列 Logo -->
+            <div id="navBrand" class="nav-brand">
+                <img src="logo.png" alt="看社交 Logo">
+            </div>
             <div class="nav-center">
                 <button id="navHome" class="nav-btn active">🏠 主頁</button>
                 <button id="navChat" class="nav-btn">
@@ -148,7 +157,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, browserLocalPersistence, setPersistence } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, updateDoc, doc, setDoc, getDoc, deleteDoc, arrayUnion, arrayRemove, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, updateDoc, doc, setDoc, getDoc, deleteDoc, arrayUnion, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDnF-e8BYtHKkqMGKLPL6-tCzh9SZHwGIE",
@@ -273,7 +282,6 @@
                     const div = document.createElement("div");
                     div.className = "post";
 
-                    // 安全防護：使用 DOM 節點與 textContent 替代 innerHTML 渲染使用者內容，防止 XSS
                     const headerEl = document.createElement("div");
                     const strongName = document.createElement("strong");
                     strongName.textContent = postName;
@@ -411,7 +419,6 @@
                 const userItem = document.createElement("div");
                 userItem.className = "user-list-item";
 
-                // 使用安全節點建立使用者列表
                 const infoArea = document.createElement("div");
                 infoArea.className = "user-info-area";
 
@@ -627,7 +634,6 @@
                     bubble.className = "message-bubble";
                     bubble.id = `msg-bubble-${msgId}`;
 
-                    // 使用 textContent 避免聊天訊息內文受到 XSS 攻擊
                     if (msg.replyTo) {
                         const replyQuote = document.createElement("div");
                         replyQuote.className = "reply-quote";
