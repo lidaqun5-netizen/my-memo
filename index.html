@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>看社交</title>
-    <!-- 瀏覽器分頁圖示 -->
-    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <!-- 瀏覽器分頁圖示 (如果沒有 favicon.ico 可以先暫時用 logo.png) -->
+    <link rel="icon" href="logo.png" type="image/x-icon">
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 0; margin: 0; background: #fafafa; color: #262626; }
         .navbar { display: flex; justify-content: space-between; align-items: center; background: #fff; border-bottom: 1px solid #dbdbdb; padding: 0 15px; position: fixed; top: 0; width: 100%; height: 50px; z-index: 100; box-sizing: border-box; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
@@ -20,7 +20,7 @@
         .container { width: 100%; max-width: 500px; margin: 65px auto 20px auto; padding: 10px; box-sizing: border-box; }
         .post { background: #fff; border: 1px solid #dbdbdb; border-radius: 8px; padding: 15px; margin-bottom: 20px; }
         .login-box { text-align: center; margin-top: 80px; padding: 20px; }
-        .login-logo { max-width: 140px; width: 100%; height: auto; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .login-logo { max-width: 160px; width: 100%; height: auto; margin-bottom: 20px; }
         .btn { padding: 8px 16px; cursor: pointer; border-radius: 4px; border: none; background: #0095f6; color: white; font-weight: bold; font-size: 14px; }
         .btn-danger { background: #ed4956; }
         .liked { color: #ed4956 !important; }
@@ -73,16 +73,16 @@
 </head>
 <body>
 
+    <!-- 登入頁面 -->
     <div id="loginSection" class="login-box">
-        <!-- 登入頁面 Logo -->
         <img src="logo.png" alt="看社交 Logo" class="login-logo">
-        <h2 style="margin-bottom: 20px;">歡迎來到看社交</h2>
+        <h2>歡迎來到看社交</h2>
         <button id="loginBtn" class="btn">使用 Google 登入</button>
     </div>
 
+    <!-- 主要 App 介面 -->
     <div id="appSection" style="display:none;">
         <div class="navbar">
-            <!-- 導覽列 Logo -->
             <div id="navBrand" class="nav-brand">
                 <img src="logo.png" alt="看社交 Logo">
             </div>
